@@ -1,0 +1,70 @@
+Phase 0：原始数据预处理（Pre-processing & Merging）
+（对应我们最早的 preprocess.py 脚本）
+
+加载并精简原始文件
+
+读取 movies_metadata.csv（保留核心列：id, title, release_date, genres, budget, revenue, runtime, vote_average, vote_count, original_language, production_countries, overview, popularity, status 等）
+解析 JSON 列：genres → genres_parsed（逗号分隔字符串）、production_countries → countries
+过滤噪声：vote_count >= 10
+读取 keywords.csv 并解析 keywords → keywords_parsed
+读取 credits.csv 并提取 director 和 top_cast（前5位演员）
+读取 ratings_small.csv（直接使用小版本替代 700MB 的完整 ratings.csv）
+
+
+合并成一张综合分析表
+以 id 为键，将 movies + credits + keywords 合并，生成 movies_full_analysis.csv（约 12–15MB，包含所有必要字段）
+输出 ratings_small_clean.csv（已过滤只保留出现在 movies 中的电影）
+
+输出：movies_full_analysis.csv + ratings_small_clean.csv
+
+Step 1 — Loading Raw Data
+加载两个原始数据集：movies_full_analysis.csv 和 ratings_small_clean.csv。
+前者包含电影元数据（预算、票房、评分、类型、导演等），后者包含用户评分记录。
+
+Step 2 — Initial Exploration
+检查两份数据的基本结构：行列数、字段类型、前几行样本。
+目的：在动手清洗前先理解数据长什么样，判断后续需要处理哪些字段。
+
+Step 3 — Missing Value Inspection
+分两个层面检查缺失值：
+
+显式缺失（NaN）：用 isnull() 统计每列空值数量。
+隐式缺失（0 值）：TMDB 数据中 budget=0、revenue=0 往往表示"未公开"而非真正为零（合计占比约 68%）。如果不处理，会严重拉低票房、预算的统计平均值。
+
+关键决策：将 budget、revenue、runtime 字段中的 0 视为缺失，后续统一转为 NaN。
+
+Step 4 — Duplicate Inspection
+检查 movies 是否存在重复的 id，ratings 是否存在完全重复的记录。
+目的：避免同一部电影被重复统计，污染分析结果。
+
+Step 5 — Cleaning the Movies Dataset
+按顺序执行 6 步操作：
+5.1 去除重复 ID —— 按 id 去重，保留首次出现的记录。
+5.2 只保留已上映电影 —— 过滤掉状态为 Rumored / Planned / In Production / Post Production 的电影，因为这类电影缺少完整的票房数据，会干扰商业分析。
+5.3 日期标准化 —— 将 release_date 从字符串转为 datetime 类型，并提取 release_year、release_decade 两个衍生字段，供时间序列分析使用。无法解析的日期记录予以删除。
+5.4 时间范围限制 —— 按项目要求，只保留 2017 年 7 月及以前上映的电影，剔除个别未来日期的异常值。
+5.5 隐式缺失值转换 —— 将 budget、revenue、runtime 中的 0 替换为 NaN。这样做有两个好处：计算均值/中位数时这些记录会自动被排除；可以避免后续计算 ROI（票房/预算）时出现"除以零"错误。
+5.6 派生新特征 —— 基于清洗后的字段构造三个分析友好的新列：
+
+roi = revenue / budget（投资回报率）
+profit = revenue − budget（绝对利润，美元）
+primary_genre = 取 genres_parsed 第一个类型作为主类型，方便分组统计
+
+5.7 类型一致性 —— 将 title、original_language 明确声明为字符串类型，避免 pandas 误判。
+
+Step 6 — Cleaning the Ratings Dataset
+ratings 数据本身已较为规整，主要做三步：
+6.1 去重 —— 删除完全重复的评分记录。
+6.2 时间戳转换 —— 将 Unix timestamp 转为 datetime 类型，并提取 rating_year，便于分析"用户活跃时段"等时间维度问题。
+6.3 评分范围校验 —— MovieLens 评分应在 0.5–5.0 之间，超出范围的记录视为异常并剔除。
+
+Step 7 — Post-cleaning Summary
+对清洗后的数据再做一次统计检查：最终行数、数值型字段的 describe、各研究问题可用的样本量。
+目的：向读者/评委证明清洗过程没有意外丢失数据，且清洗后的数据足以支撑后续分析。
+
+Step 8 — Export Cleaned Data
+输出三个文件作为后续所有分析脚本的统一输入：
+
+movies_clean.csv — 清洗后的电影元数据（含派生字段）
+ratings_clean.csv — 清洗后的用户评分（含 datetime）
+data_quality_report.txt — 完整的清洗日志，便于复现与写报告

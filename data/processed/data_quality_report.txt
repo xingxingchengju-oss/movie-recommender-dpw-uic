@@ -1,0 +1,136 @@
+Data Quality Report  (generated 2026-04-17 22:50:24)
+============================================================
+STEP 1. Loading raw data
+============================================================
+movies_full_analysis.csv  -> shape = (23374, 17)
+ratings_small_clean.csv   -> shape = (40008, 4)
+
+============================================================
+STEP 2. Initial exploration
+============================================================
+
+[Movies] dtypes:
+budget                 int64
+id                     int64
+original_language        str
+overview                 str
+popularity           float64
+release_date             str
+revenue              float64
+runtime              float64
+status                   str
+title                    str
+vote_average         float64
+vote_count           float64
+genres_parsed            str
+countries                str
+director                 str
+top_cast                 str
+keywords_parsed          str
+dtype: object
+
+[Movies] first 3 rows:
+     budget     id original_language                                           overview  popularity release_date      revenue  runtime    status             title  vote_average  vote_count  \
+0  30000000    862                en  Led by Woody, Andy's toys live happily in his ...   21.946943   1995-10-30  373554033.0     81.0  Released         Toy Story           7.7      5415.0   
+1  65000000   8844                en  When siblings Judy and Peter discover an encha...   17.015539   1995-12-15  262797249.0    104.0  Released           Jumanji           6.9      2413.0   
+2         0  15602                en  A family wedding reignites the ancient feud be...   11.712900   1995-12-22          0.0    101.0  Released  Grumpier Old Men           6.5        92.0   
+
+              genres_parsed countries       director                                           top_cast                                    keywords_parsed  
+0   Animation|Comedy|Family        US  John Lasseter  Tom Hanks|Tim Allen|Don Rickles|Jim Varney|Wal...  jealousy|toy|boy|friendship|friends|rivalry|bo...  
+1  Adventure|Fantasy|Family        US   Joe Johnston  Robin Williams|Jonathan Hyde|Kirsten Dunst|Bra...  board game|disappearance|based on children's b...  
+2            Romance|Comedy        US  Howard Deutch  Walter Matthau|Jack Lemmon|Ann-Margret|Sophia ...   fishing|best friend|duringcreditsstinger|old men  
+
+[Ratings] dtypes:
+userId         int64
+movieId        int64
+rating       float64
+timestamp      int64
+dtype: object
+
+[Ratings] first 3 rows:
+   userId  movieId  rating   timestamp
+0       1     1371     2.5  1260759135
+1       1     1405     1.0  1260759203
+2       1     2105     4.0  1260759139
+
+============================================================
+STEP 3. Missing value inspection
+============================================================
+
+[Movies] missing value count per column:
+budget                  0
+id                      0
+original_language       1
+overview              170
+popularity              0
+release_date            3
+revenue                 0
+runtime                14
+status                  5
+title                   0
+vote_average            0
+vote_count              0
+genres_parsed         139
+countries             979
+director               81
+top_cast              258
+keywords_parsed      4410
+dtype: int64
+
+[Ratings] missing value count per column:
+userId       0
+movieId      0
+rating       0
+timestamp    0
+dtype: int64
+
+Implicit missing values (treated as NaN later):
+  budget  == 0 : 15662  (67.0%)
+  revenue == 0 : 16463 (70.4%)
+  runtime == 0 : 241 (1.0%)
+
+============================================================
+STEP 4. Duplicate inspection
+============================================================
+Movies - duplicated id   : 459
+Movies - duplicated rows : 450
+Ratings - duplicated rows: 0
+
+============================================================
+STEP 5. Cleaning movies dataset
+============================================================
+5.1 Drop duplicate ids    : 23374 -> 22915
+5.2 Keep status=Released  : 22915 -> 22812
+5.3 Drop invalid dates    : 22812 -> 22809
+5.4 Keep date <= 2017-07  : 22809 -> 22796
+5.5 Converted 0 -> NaN for budget / revenue / runtime
+5.6 Added features: roi, profit, primary_genre
+
+============================================================
+STEP 6. Cleaning ratings dataset
+============================================================
+6.1 Drop duplicates       : 40008 -> 40008
+6.2 Keep rating in [0.5,5]: 40008 -> 40008
+Unique users  : 671
+Unique movies : 2189
+Time span     : 1995-01-09 -> 2016-10-16
+
+============================================================
+STEP 7. Post-cleaning summary
+============================================================
+Final movies shape : (22796, 22)
+Final ratings shape: (40008, 6)
+
+[Movies] numeric summary after cleaning:
+             budget       revenue       runtime  vote_average    vote_count    popularity           roi
+count  7.566000e+03  6.776000e+03  22561.000000  22796.000000  22796.000000  22796.000000  5.119000e+03
+mean   2.493496e+07  7.483868e+07    101.633039      6.175667    215.291279      5.240961  5.312272e+03
+std    3.611921e+07  1.516345e+08     32.270289      0.994893    677.517272      7.746746  2.189861e+05
+min    1.000000e+00  1.000000e+00      1.000000      0.000000     10.000000      0.000001  5.217391e-07
+25%    3.500000e+06  4.000000e+06     90.000000      5.600000     17.000000      1.683565  8.354178e-01
+50%    1.200000e+07  2.044795e+07     98.000000      6.300000     34.000000      3.530436  2.106312e+00
+75%    3.000000e+07  7.579889e+07    111.000000      6.900000    109.000000      7.294204  4.290274e+00
+max    3.800000e+08  2.787965e+09    900.000000      9.500000  14075.000000    547.488298  1.239638e+07
+
+[Movies] rows with usable (budget, revenue) pair:
+  5119 rows (~22.5% of cleaned set)

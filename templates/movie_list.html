@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movies - CineMatch</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="2"/>
+        <circle cx="8" cy="8" r="1.5" fill="#00D4AA"/>
+        <circle cx="16" cy="8" r="1.5" fill="#00D4AA"/>
+        <circle cx="8" cy="16" r="1.5" fill="#00D4AA"/>
+        <circle cx="16" cy="16" r="1.5" fill="#00D4AA"/>
+      </svg>
+      <span class="logo-text">CineMatch</span>
+    </div>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="movie_list.html" class="nav-link active" data-page="movies">
+          <i data-lucide="film"></i>
+          <span>Movies</span>
+        </a>
+      </li>
+      <li>
+        <a href="analysis.html" class="nav-link" data-page="analysis">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Analysis</span>
+        </a>
+      </li>
+      <li>
+        <a href="recommend.html" class="nav-link" data-page="recommend">
+          <i data-lucide="sparkles"></i>
+          <span>Recommend</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Movies</h1>
+    </div>
+
+    <!-- Toolbar: Sort + Genre Filters -->
+    <div class="toolbar">
+      <div class="sort-row">
+        <span class="sort-label">Sort By</span>
+        <select class="sort-select" id="sort-select">
+          <option value="normal">Normal</option>
+          <option value="rate">Rate</option>
+          <option value="date">Date</option>
+        </select>
+      </div>
+      <div class="genre-filters" id="genre-filters">
+        <!-- Genre tags rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Movie Grid -->
+    <div class="movie-grid" id="movie-grid">
+      <!-- Movie cards rendered by JS -->
+    </div>
+  </main>
+
+  <script src="../static/mock_data.js"></script>
+  <script src="../static/script.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
