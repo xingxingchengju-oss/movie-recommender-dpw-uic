@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis - Reelvana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/style.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M7 4v16M17 4v16M2 9h5M17 9h5M2 15h5M17 15h5"/>
+      </svg>
+      <span class="logo-text">Reelvana</span>
+    </div>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="movie_list.html" class="nav-link" data-page="movies">
+          <i data-lucide="film"></i>
+          <span>Movies</span>
+        </a>
+      </li>
+      <li>
+        <a href="analysis.html" class="nav-link active" data-page="analysis">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Analysis</span>
+        </a>
+      </li>
+      <li>
+        <a href="recommend.html" class="nav-link" data-page="recommend">
+          <i data-lucide="sparkles"></i>
+          <span>Recommend</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Analysis</h1>
+      <p class="page-subtitle">Insights from 22,796 films</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card" style="animation-delay:0s">
+        <div class="kpi-header">
+          <span class="kpi-label">Total Movies</span>
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </div>
+        <div class="kpi-value">22,796</div>
+        <div class="kpi-sub">films in dataset</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.08s">
+        <div class="kpi-header">
+          <span class="kpi-label">Avg Rating</span>
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+        </div>
+        <div class="kpi-value">6.5</div>
+        <div class="kpi-sub">out of 10</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.16s">
+        <div class="kpi-header">
+          <span class="kpi-label">Top Genre</span>
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div class="kpi-value">Drama</div>
+        <div class="kpi-sub">4,820 films</div>
+      </div>
+      <div class="kpi-card" style="animation-delay:0.24s">
+        <div class="kpi-header">
+          <span class="kpi-label">Total Revenue</span>
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="kpi-value">$284B</div>
+        <div class="kpi-sub">disclosed titles only</div>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <div class="chart-tabs" role="tablist">
+        <button class="chart-tab active" data-tab="production" role="tab" aria-selected="true">Production by Year</button>
+        <button class="chart-tab" data-tab="genre" role="tab" aria-selected="false">Genre Distribution</button>
+        <button class="chart-tab" data-tab="directors" role="tab" aria-selected="false">Top Directors</button>
+        <button class="chart-tab" data-tab="ratings" role="tab" aria-selected="false">Rating Trends</button>
+      </div>
+      <div class="chart-card">
+        <div class="chart-panel active" id="panel-production">
+          <div id="chart-production" style="width:100%;height:400px"></div>
+        </div>
+        <div class="chart-panel" id="panel-genre">
+          <div id="chart-genre" style="width:100%;height:400px"></div>
+        </div>
+        <div class="chart-panel" id="panel-directors">
+          <div id="chart-directors" style="width:100%;height:400px"></div>
+        </div>
+        <div class="chart-panel" id="panel-ratings">
+          <div id="chart-ratings" style="width:100%;height:400px"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="../static/mock_data.js"></script>
+  <script>
+    lucide.createIcons();
+
+    // ── KPI stagger entrance ──────────────────────────────────────────────
+    const kpiCards = document.querySelectorAll(".kpi-card");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("is-visible"); io.unobserve(e.target); }
+        }),
+        { threshold: 0.1 }
+      );
+      kpiCards.forEach((c) => io.observe(c));
+    } else {
+      kpiCards.forEach((c) => c.classList.add("is-visible"));
+    }
+
+    // ── Shared Plotly layout base ─────────────────────────────────────────
+    const FONT_FAMILY = "'SF Pro Display', 'Inter', -apple-system, sans-serif";
+    const ACCENT      = "#00D4AA";
+    const TEXT_SEC    = "#8B949E";
+    const TEXT_MUTED  = "#4B5563";
+    const BORDER_CLR  = "rgba(255,255,255,0.08)";
+
+    const baseLayout = {
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor:  "rgba(0,0,0,0)",
+      font: { family: FONT_FAMILY, color: TEXT_SEC, size: 12 },
+      margin: { t: 20, r: 20, b: 48, l: 56 },
+      xaxis: {
+        gridcolor: BORDER_CLR,
+        linecolor: BORDER_CLR,
+        tickfont: { color: TEXT_MUTED },
+        zerolinecolor: BORDER_CLR
+      },
+      yaxis: {
+        gridcolor: BORDER_CLR,
+        linecolor: BORDER_CLR,
+        tickfont: { color: TEXT_MUTED },
+        zerolinecolor: BORDER_CLR
+      },
+      legend: { font: { color: TEXT_SEC }, bgcolor: "rgba(0,0,0,0)" },
+      hoverlabel: {
+        bgcolor: "#111827",
+        bordercolor: BORDER_CLR,
+        font: { family: FONT_FAMILY, color: "#F5F7FA" }
+      }
+    };
+
+    const config = { displayModeBar: false, responsive: true };
+
+    // ── Chart renderers ───────────────────────────────────────────────────
+    const rendered = {};
+
+    function renderProduction() {
+      if (rendered.production) return;
+      rendered.production = true;
+      const d = CHART_DATA.productionByYear;
+      Plotly.newPlot("chart-production", [{
+        x: d.years,
+        y: d.counts,
+        type: "bar",
+        marker: {
+          color: d.counts.map((_, i) => `hsla(${165 + i * 2}, 70%, ${38 + i * 0.5}%, 0.85)`),
+          line: { color: "rgba(0,0,0,0)", width: 0 }
+        },
+        hovertemplate: "<b>%{x}</b><br>%{y} films<extra></extra>"
+      }], {
+        ...baseLayout,
+        xaxis: { ...baseLayout.xaxis, tickmode: "linear", dtick: 2 },
+        bargap: 0.3
+      }, config);
+    }
+
+    function renderGenre() {
+      if (rendered.genre) return;
+      rendered.genre = true;
+      const d = CHART_DATA.genreDistribution;
+      const palette = [
+        "#00D4AA","#00B8D9","#6554C0","#FF5630","#FF8B00",
+        "#36B37E","#0052CC","#97A0AF","#403294","#00875A",
+        "#DE350B","#0065FF"
+      ];
+      Plotly.newPlot("chart-genre", [{
+        labels: d.labels,
+        values: d.values,
+        type: "pie",
+        hole: 0.52,
+        marker: { colors: palette, line: { color: "rgba(0,0,0,0)", width: 0 } },
+        textinfo: "label+percent",
+        textfont: { family: FONT_FAMILY, size: 11, color: "#F5F7FA" },
+        hovertemplate: "<b>%{label}</b><br>%{value} films (%{percent})<extra></extra>"
+      }], {
+        ...baseLayout,
+        margin: { t: 20, r: 20, b: 20, l: 20 },
+        showlegend: false
+      }, config);
+    }
+
+    function renderDirectors() {
+      if (rendered.directors) return;
+      rendered.directors = true;
+      const d = CHART_DATA.topDirectors;
+      Plotly.newPlot("chart-directors", [{
+        x: d.ratings,
+        y: d.names,
+        type: "bar",
+        orientation: "h",
+        marker: {
+          color: ACCENT,
+          opacity: 0.85,
+          line: { color: "rgba(0,0,0,0)", width: 0 }
+        },
+        text: d.ratings.map((r) => r.toFixed(1)),
+        textposition: "outside",
+        textfont: { color: TEXT_SEC, size: 11 },
+        hovertemplate: "<b>%{y}</b><br>Avg rating: %{x}<extra></extra>"
+      }], {
+        ...baseLayout,
+        margin: { t: 20, r: 60, b: 48, l: 160 },
+        xaxis: { ...baseLayout.xaxis, range: [7, 8.8], title: { text: "Average Rating", font: { color: TEXT_MUTED } } },
+        yaxis: { ...baseLayout.yaxis, autorange: "reversed", tickfont: { color: TEXT_SEC, size: 12 } },
+        bargap: 0.35
+      }, config);
+    }
+
+    function renderRatings() {
+      if (rendered.ratings) return;
+      rendered.ratings = true;
+      const d = CHART_DATA.ratingTrends;
+      const colors = ["#00D4AA","#00B8D9","#6554C0","#FF8B00","#36B37E"];
+      const traces = Object.entries(d.genres).map(([genre, vals], i) => ({
+        x: d.years,
+        y: vals,
+        name: genre,
+        type: "scatter",
+        mode: "lines+markers",
+        line: { color: colors[i], width: 2, shape: "spline" },
+        marker: { color: colors[i], size: 5 },
+        hovertemplate: `<b>${genre}</b><br>%{x}: %{y:.1f}<extra></extra>`
+      }));
+      Plotly.newPlot("chart-ratings", traces, {
+        ...baseLayout,
+        yaxis: { ...baseLayout.yaxis, range: [6.0, 8.2], title: { text: "Avg Rating", font: { color: TEXT_MUTED } } },
+        xaxis: { ...baseLayout.xaxis, title: { text: "Year", font: { color: TEXT_MUTED } } },
+        showlegend: true,
+        legend: { ...baseLayout.legend, x: 1, xanchor: "right", y: 1 }
+      }, config);
+    }
+
+    const renderers = {
+      production: renderProduction,
+      genre:      renderGenre,
+      directors:  renderDirectors,
+      ratings:    renderRatings
+    };
+
+    // ── Tab switching ─────────────────────────────────────────────────────
+    const tabs   = document.querySelectorAll(".chart-tab");
+    const panels = document.querySelectorAll(".chart-panel");
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.dataset.tab;
+
+        // Update tab active state
+        tabs.forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
+        tab.classList.add("active");
+        tab.setAttribute("aria-selected", "true");
+
+        // Fade out current panel, swap, fade in
+        const current = document.querySelector(".chart-panel.active");
+        const next    = document.getElementById(`panel-${target}`);
+        if (current === next) return;
+
+        current.classList.add("fading");
+        setTimeout(() => {
+          current.classList.remove("active", "fading");
+          next.classList.add("active");
+          // Render chart lazily on first show
+          renderers[target]();
+          // Force Plotly resize after display:block
+          const plotEl = next.querySelector("[id^='chart-']");
+          if (plotEl && plotEl.data) Plotly.relayout(plotEl.id, {});
+        }, 200);
+      });
+    });
+
+    // Render first chart immediately
+    renderProduction();
+  </script>
+</body>
+</html>

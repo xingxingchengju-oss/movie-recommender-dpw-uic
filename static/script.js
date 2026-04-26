@@ -4,7 +4,7 @@
 
   const genreContainer = document.getElementById("genre-filters");
   const gridContainer  = document.getElementById("movie-grid");
-  const sortSelect     = document.getElementById("sort-select");
+  const sortWidget     = document.getElementById("sort-select");
   const movieCount     = document.getElementById("movie-count");
 
   if (!genreContainer || !gridContainer) return;
@@ -101,16 +101,41 @@
     observeCards();
   }
 
+  // Custom select widget
+  if (sortWidget) {
+    const trigger  = sortWidget.querySelector(".custom-select-trigger");
+    const valueEl  = sortWidget.querySelector(".custom-select-value");
+    const options  = sortWidget.querySelectorAll(".custom-select-option");
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = sortWidget.classList.toggle("open");
+      trigger.setAttribute("aria-expanded", isOpen);
+    });
+
+    options.forEach((opt) => {
+      opt.addEventListener("click", () => {
+        currentSort = opt.dataset.value;
+        valueEl.textContent = opt.textContent;
+        options.forEach((o) => o.classList.remove("active"));
+        opt.classList.add("active");
+        sortWidget.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+        renderMovies();
+      });
+    });
+
+    document.addEventListener("click", () => {
+      sortWidget.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
   genreContainer.addEventListener("click", (e) => {
     const tag = e.target.closest(".genre-tag");
     if (!tag) return;
     currentGenre = tag.dataset.genre;
     renderGenreTags();
-    renderMovies();
-  });
-
-  sortSelect.addEventListener("change", (e) => {
-    currentSort = e.target.value;
     renderMovies();
   });
 

@@ -181,3 +181,29 @@ const ALL_GENRES = [
   "All", "Action", "Adventure", "Animation", "Comedy", "Crime",
   "Drama", "Fantasy", "History", "Mystery", "Science Fiction", "Thriller"
 ];
+
+const CHART_DATA = {
+  productionByYear: {
+    years: [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017],
+    counts: [820,854,891,930,978,1043,1102,1189,1254,1318,1401,1476,1553,1620,1714,1832,1945,1203]
+  },
+  genreDistribution: {
+    labels: ["Drama","Comedy","Thriller","Action","Romance","Horror","Science Fiction","Adventure","Crime","Animation","Fantasy","History"],
+    values: [4820,3210,2540,2380,1960,1740,1520,1380,1250,980,760,540]
+  },
+  topDirectors: {
+    names: ["Christopher Nolan","Hayao Miyazaki","Bong Joon-ho","Denis Villeneuve","Alfonso Cuarón","Wes Anderson","David Fincher","Quentin Tarantino","Martin Scorsese","Steven Spielberg"],
+    ratings: [8.4,8.3,8.1,8.0,7.9,7.8,7.7,7.7,7.6,7.5],
+    counts: [8,11,12,9,10,10,9,10,14,18]
+  },
+  ratingTrends: {
+    years: [2000,2002,2004,2006,2008,2010,2012,2014,2016,2017],
+    genres: {
+      "Drama":        [7.1,7.0,7.2,7.1,7.3,7.2,7.4,7.3,7.2,7.1],
+      "Action":       [6.4,6.3,6.5,6.4,6.6,6.5,6.7,6.6,6.5,6.4],
+      "Science Fiction": [6.8,6.9,7.0,6.9,7.1,7.2,7.3,7.4,7.3,7.2],
+      "Animation":    [7.2,7.3,7.4,7.5,7.6,7.5,7.7,7.6,7.8,7.7],
+      "Thriller":     [6.9,6.8,7.0,6.9,7.1,7.0,7.2,7.1,7.0,6.9]
+    }
+  }
+};
