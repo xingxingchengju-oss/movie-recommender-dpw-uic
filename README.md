@@ -1,4 +1,4 @@
-# 🎬 CineMatch
+# 🎬 Reelvana
 
 > Movie analytics & recommendation web app powered by TMDB + MovieLens.
 
@@ -26,7 +26,7 @@ Group project for **CST3104 Software Development Workshop II** at United Interna
 ## 📂 Structure
 
 ```
-cinematch/
+reelvana/
 ├── app.py              # Flask app & all routes
 ├── recommender.py      # TF-IDF recommendation logic
 ├── analysis.py         # Chart data functions
@@ -44,8 +44,8 @@ cinematch/
 
 ```bash
 # 1. Clone
-git clone https://github.com/<your-username>/cinematch.git
-cd cinematch
+git clone https://github.com/<your-username>/reelvana.git
+cd reelvana
 
 # 2. Create virtual env
 python -m venv venv

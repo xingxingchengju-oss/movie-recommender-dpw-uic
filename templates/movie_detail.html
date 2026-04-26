@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Detail - Reelvana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/style.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="2"/>
+        <circle cx="8" cy="8" r="1.5" fill="#00D4AA"/>
+        <circle cx="16" cy="8" r="1.5" fill="#00D4AA"/>
+        <circle cx="8" cy="16" r="1.5" fill="#00D4AA"/>
+        <circle cx="16" cy="16" r="1.5" fill="#00D4AA"/>
+      </svg>
+      <span class="logo-text">Reelvana</span>
+    </div>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="movie_list.html" class="nav-link active" data-page="movies">
+          <i data-lucide="film"></i>
+          <span>Movies</span>
+        </a>
+      </li>
+      <li>
+        <a href="analysis.html" class="nav-link" data-page="analysis">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Analysis</span>
+        </a>
+      </li>
+      <li>
+        <a href="recommend.html" class="nav-link" data-page="recommend">
+          <i data-lucide="sparkles"></i>
+          <span>Recommend</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content" id="detail-content">
+    <!-- Populated by JS -->
+  </main>
+
+  <script src="../static/mock_data.js"></script>
+  <script>
+    (function () {
+      function getPosterGradient(id) {
+        const hue1 = (id * 137.508) % 360;
+        const hue2 = (hue1 + 40) % 360;
+        const hue3 = (hue1 + 80) % 360;
+        const sat  = 55 + (id % 3) * 10;
+        const l1   = 18 + (id % 4) * 4;
+        const l2   = 12 + (id % 3) * 3;
+        return `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const id = parseInt(params.get("id"), 10);
+      const movie = MOCK_MOVIES.find((m) => m.id === id);
+      const container = document.getElementById("detail-content");
+
+      if (!movie) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding-top:120px">
+            <i data-lucide="film"></i>
+            <p>Movie not found.</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      document.title = `${movie.title} - Reelvana`;
+
+      const genreTags = movie.genres
+        .map((g) => `<span class="detail-genre-tag">${g}</span>`)
+        .join("");
+
+      container.innerHTML = `
+        <a href="movie_list.html" class="back-btn">
+          <i data-lucide="arrow-left"></i>
+          Movies
+        </a>
+
+        <div class="detail-layout">
+          <div class="detail-poster" style="background:${getPosterGradient(movie.id)}">
+            <i data-lucide="film" class="detail-poster-icon"></i>
+          </div>
+
+          <div class="detail-body">
+            <h1 class="detail-title">${movie.title}</h1>
+
+            <div class="detail-genres">
+              ${genreTags}
+            </div>
+
+            <div class="detail-stats">
+              <div class="stat-item">
+                <span class="stat-label">Rating</span>
+                <span class="stat-value rating-value">★ ${movie.vote_average.toFixed(1)}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Year</span>
+                <span class="stat-value">${movie.release_year}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Director</span>
+                <span class="stat-value">${movie.director}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Genre</span>
+                <span class="stat-value">${movie.primary_genre}</span>
+              </div>
+            </div>
+
+            <p class="detail-overview">${movie.overview}</p>
+          </div>
+        </div>`;
+
+      lucide.createIcons();
+    })();
+  </script>
+</body>
+</html>

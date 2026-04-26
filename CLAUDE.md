@@ -1,4 +1,4 @@
-# CineMatch — Claude Code Guide
+# Reelvana — Claude Code Guide
 
 UIC sophomore group project (CST3104). Movie recommendation web app on TMDB + MovieLens data (≤ July 2017). Keep it simple — this is a course assignment, not production.
 

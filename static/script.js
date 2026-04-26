@@ -3,10 +3,40 @@
   let currentSort = "normal";
 
   const genreContainer = document.getElementById("genre-filters");
-  const gridContainer = document.getElementById("movie-grid");
-  const sortSelect = document.getElementById("sort-select");
+  const gridContainer  = document.getElementById("movie-grid");
+  const sortSelect     = document.getElementById("sort-select");
+  const movieCount     = document.getElementById("movie-count");
 
   if (!genreContainer || !gridContainer) return;
+
+  function getPosterGradient(id) {
+    const hue1 = (id * 137.508) % 360;
+    const hue2 = (hue1 + 40) % 360;
+    const hue3 = (hue1 + 80) % 360;
+    const sat  = 55 + (id % 3) * 10;
+    const l1   = 18 + (id % 4) * 4;
+    const l2   = 12 + (id % 3) * 3;
+    return `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
+  }
+
+  function observeCards() {
+    const cards = gridContainer.querySelectorAll(".movie-card");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entries) =>
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("is-visible");
+              io.unobserve(e.target);
+            }
+          }),
+        { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+      );
+      cards.forEach((c) => io.observe(c));
+    } else {
+      cards.forEach((c) => c.classList.add("is-visible"));
+    }
+  }
 
   function renderGenreTags() {
     genreContainer.innerHTML = ALL_GENRES.map(
@@ -31,10 +61,15 @@
 
   function renderMovies() {
     const movies = getFilteredMovies();
+
+    if (movieCount) {
+      movieCount.textContent = `${movies.length} ${movies.length === 1 ? "movie" : "movies"}`;
+    }
+
     if (movies.length === 0) {
       gridContainer.innerHTML = `
-        <div class="empty-state" style="grid-column:1/-1">
-          <i data-lucide="film" style="width:48px;height:48px;opacity:.4"></i>
+        <div class="empty-state">
+          <i data-lucide="film"></i>
           <p>No movies found for this genre.</p>
         </div>`;
       lucide.createIcons();
@@ -43,9 +78,9 @@
 
     gridContainer.innerHTML = movies
       .map(
-        (m) => `
-      <div class="movie-card" data-id="${m.id}">
-        <div class="movie-poster">
+        (m, i) => `
+      <div class="movie-card" data-id="${m.id}" style="animation-delay:${i * 0.05}s">
+        <div class="movie-poster" style="background:${getPosterGradient(m.id)}">
           <i data-lucide="film" class="poster-icon"></i>
         </div>
         <div class="movie-info">
@@ -63,6 +98,7 @@
       .join("");
 
     lucide.createIcons();
+    observeCards();
   }
 
   genreContainer.addEventListener("click", (e) => {
@@ -81,8 +117,7 @@
   gridContainer.addEventListener("click", (e) => {
     const card = e.target.closest(".movie-card");
     if (!card) return;
-    const movieId = card.dataset.id;
-    window.location.href = `movie_detail.html?id=${movieId}`;
+    window.location.href = `movie_detail.html?id=${card.dataset.id}`;
   });
 
   renderGenreTags();
