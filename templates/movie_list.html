@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -23,19 +23,19 @@
     </div>
     <ul class="sidebar-nav">
       <li>
-        <a href="movie_list.html" class="nav-link active" data-page="movies">
+        <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
           <i data-lucide="film"></i>
           <span>Movies</span>
         </a>
       </li>
       <li>
-        <a href="analysis.html" class="nav-link" data-page="analysis">
+        <a href="/analysis" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
           <i data-lucide="bar-chart-3"></i>
           <span>Analysis</span>
         </a>
       </li>
       <li>
-        <a href="recommend.html" class="nav-link" data-page="recommend">
+        <a href="/recommender" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
           <i data-lucide="sparkles"></i>
           <span>Recommend</span>
         </a>
@@ -77,8 +77,7 @@
     </div>
   </main>
 
-  <script src="../static/mock_data.js"></script>
-  <script src="../static/script.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
   <script>lucide.createIcons();</script>
 </body>
 </html>

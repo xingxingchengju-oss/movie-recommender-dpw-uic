@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 </head>
@@ -24,19 +24,19 @@
     </div>
     <ul class="sidebar-nav">
       <li>
-        <a href="movie_list.html" class="nav-link" data-page="movies">
+        <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
           <i data-lucide="film"></i>
           <span>Movies</span>
         </a>
       </li>
       <li>
-        <a href="analysis.html" class="nav-link active" data-page="analysis">
+        <a href="{{ url_for('page_analysis') }}" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
           <i data-lucide="bar-chart-3"></i>
           <span>Analysis</span>
         </a>
       </li>
       <li>
-        <a href="recommend.html" class="nav-link" data-page="recommend">
+        <a href="/recommender" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
           <i data-lucide="sparkles"></i>
           <span>Recommend</span>
         </a>
@@ -47,10 +47,9 @@
   <!-- Main Content -->
   <main class="main-content">
 
-    <!-- Page Header -->
     <div class="page-header">
       <h1 class="page-title">Analysis</h1>
-      <p class="page-subtitle">Insights from 22,796 films</p>
+      <p class="page-subtitle">Insights from {{ "{:,}".format(kpis.total_movies) }} films</p>
     </div>
 
     <!-- KPI Cards -->
@@ -60,7 +59,7 @@
           <span class="kpi-label">Total Movies</span>
           <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         </div>
-        <div class="kpi-value">22,796</div>
+        <div class="kpi-value">{{ "{:,}".format(kpis.total_movies) }}</div>
         <div class="kpi-sub">films in dataset</div>
       </div>
       <div class="kpi-card" style="animation-delay:0.08s">
@@ -68,7 +67,7 @@
           <span class="kpi-label">Avg Rating</span>
           <svg class="kpi-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>
         </div>
-        <div class="kpi-value">6.5</div>
+        <div class="kpi-value">{{ kpis.avg_rating }}</div>
         <div class="kpi-sub">out of 10</div>
       </div>
       <div class="kpi-card" style="animation-delay:0.16s">
@@ -76,50 +75,71 @@
           <span class="kpi-label">Top Genre</span>
           <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
         </div>
-        <div class="kpi-value">Drama</div>
-        <div class="kpi-sub">4,820 films</div>
+        <div class="kpi-value">{{ kpis.top_genre.name }}</div>
+        <div class="kpi-sub">{{ "{:,}".format(kpis.top_genre.count) }} films</div>
       </div>
       <div class="kpi-card" style="animation-delay:0.24s">
         <div class="kpi-header">
-          <span class="kpi-label">Total Revenue</span>
-          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="kpi-label">Median ROI</span>
+          <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
-        <div class="kpi-value">$284B</div>
-        <div class="kpi-sub">disclosed titles only</div>
+        <div class="kpi-value">{{ kpis.median_roi_disclosed }}×</div>
+        <div class="kpi-sub">based on {{ "{:,}".format(kpis.disclosed_count) }} disclosed films</div>
       </div>
     </div>
 
-    <!-- Chart Section -->
-    <div class="chart-section">
+    <!-- Group toggle: Trends / Financials -->
+    <div class="chart-tabs" role="tablist" style="margin-bottom: 8px">
+      <button class="chart-tab active" data-group="trends" role="tab" aria-selected="true">Trends (Q1)</button>
+      <button class="chart-tab" data-group="financials" role="tab" aria-selected="false">Financials (Q2)</button>
+    </div>
+
+    <!-- Trends sub-tabs -->
+    <div class="chart-section" data-group-panel="trends">
       <div class="chart-tabs" role="tablist">
-        <button class="chart-tab active" data-tab="production" role="tab" aria-selected="true">Production by Year</button>
-        <button class="chart-tab" data-tab="genre" role="tab" aria-selected="false">Genre Distribution</button>
-        <button class="chart-tab" data-tab="directors" role="tab" aria-selected="false">Top Directors</button>
-        <button class="chart-tab" data-tab="ratings" role="tab" aria-selected="false">Rating Trends</button>
+        <button class="chart-tab active" data-chart="production_trend" data-target="chart-production" role="tab" aria-selected="true">Production Trend</button>
+        <button class="chart-tab" data-chart="genre_evolution" data-target="chart-evolution" role="tab" aria-selected="false">Genre Evolution</button>
+        <button class="chart-tab" data-chart="genre_heatmap" data-target="chart-heatmap" role="tab" aria-selected="false">Genre Heatmap</button>
       </div>
       <div class="chart-card">
-        <div class="chart-panel active" id="panel-production">
-          <div id="chart-production" style="width:100%;height:400px"></div>
+        <div class="chart-panel active" id="panel-production_trend">
+          <div id="chart-production" style="width:100%;height:420px"></div>
         </div>
-        <div class="chart-panel" id="panel-genre">
-          <div id="chart-genre" style="width:100%;height:400px"></div>
+        <div class="chart-panel" id="panel-genre_evolution">
+          <div id="chart-evolution" style="width:100%;height:420px"></div>
         </div>
-        <div class="chart-panel" id="panel-directors">
-          <div id="chart-directors" style="width:100%;height:400px"></div>
+        <div class="chart-panel" id="panel-genre_heatmap">
+          <div id="chart-heatmap" style="width:100%;height:420px"></div>
         </div>
-        <div class="chart-panel" id="panel-ratings">
-          <div id="chart-ratings" style="width:100%;height:400px"></div>
+      </div>
+    </div>
+
+    <!-- Financials sub-tabs (hidden initially) -->
+    <div class="chart-section" data-group-panel="financials" style="display:none">
+      <div class="chart-tabs" role="tablist">
+        <button class="chart-tab active" data-chart="budget_revenue" data-target="chart-scatter" role="tab" aria-selected="true">Budget vs Revenue</button>
+        <button class="chart-tab" data-chart="roi_by_genre" data-target="chart-roi" role="tab" aria-selected="false">ROI by Genre</button>
+        <button class="chart-tab" data-chart="financial_correlation" data-target="chart-corr" role="tab" aria-selected="false">Correlation</button>
+      </div>
+      <div class="chart-card">
+        <div class="chart-panel active" id="panel-budget_revenue">
+          <div id="chart-scatter" style="width:100%;height:420px"></div>
+        </div>
+        <div class="chart-panel" id="panel-roi_by_genre">
+          <div id="chart-roi" style="width:100%;height:420px"></div>
+        </div>
+        <div class="chart-panel" id="panel-financial_correlation">
+          <div id="chart-corr" style="width:100%;height:420px"></div>
         </div>
       </div>
     </div>
 
   </main>
 
-  <script src="../static/mock_data.js"></script>
   <script>
     lucide.createIcons();
 
-    // ── KPI stagger entrance ──────────────────────────────────────────────
+    // KPI stagger entrance
     const kpiCards = document.querySelectorAll(".kpi-card");
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver(
@@ -133,179 +153,223 @@
       kpiCards.forEach((c) => c.classList.add("is-visible"));
     }
 
-    // ── Shared Plotly layout base ─────────────────────────────────────────
-    const FONT_FAMILY = "'SF Pro Display', 'Inter', -apple-system, sans-serif";
+    // ── Plotly theme constants ──────────────────────────────────────────
+    const FONT_FAMILY = "'Inter', 'SF Pro Display', -apple-system, sans-serif";
     const ACCENT      = "#00D4AA";
     const TEXT_SEC    = "#8B949E";
     const TEXT_MUTED  = "#4B5563";
     const BORDER_CLR  = "rgba(255,255,255,0.08)";
+    const PALETTE     = [
+      "#00D4AA", "#00B8D9", "#6554C0", "#FF5630", "#FF8B00",
+      "#36B37E", "#0052CC", "#DE350B", "#403294", "#0065FF",
+    ];
 
     const baseLayout = {
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor:  "rgba(0,0,0,0)",
       font: { family: FONT_FAMILY, color: TEXT_SEC, size: 12 },
-      margin: { t: 20, r: 20, b: 48, l: 56 },
-      xaxis: {
-        gridcolor: BORDER_CLR,
-        linecolor: BORDER_CLR,
-        tickfont: { color: TEXT_MUTED },
-        zerolinecolor: BORDER_CLR
-      },
-      yaxis: {
-        gridcolor: BORDER_CLR,
-        linecolor: BORDER_CLR,
-        tickfont: { color: TEXT_MUTED },
-        zerolinecolor: BORDER_CLR
-      },
+      margin: { t: 20, r: 24, b: 56, l: 64 },
+      xaxis: { gridcolor: BORDER_CLR, linecolor: BORDER_CLR, tickfont: { color: TEXT_MUTED }, zerolinecolor: BORDER_CLR },
+      yaxis: { gridcolor: BORDER_CLR, linecolor: BORDER_CLR, tickfont: { color: TEXT_MUTED }, zerolinecolor: BORDER_CLR },
       legend: { font: { color: TEXT_SEC }, bgcolor: "rgba(0,0,0,0)" },
-      hoverlabel: {
-        bgcolor: "#111827",
-        bordercolor: BORDER_CLR,
-        font: { family: FONT_FAMILY, color: "#F5F7FA" }
-      }
+      hoverlabel: { bgcolor: "#111827", bordercolor: BORDER_CLR, font: { family: FONT_FAMILY, color: "#F5F7FA" } },
     };
 
     const config = { displayModeBar: false, responsive: true };
 
-    // ── Chart renderers ───────────────────────────────────────────────────
-    const rendered = {};
+    // ── Chart wrappers: take raw API data → Plotly config ───────────────
+    const wrappers = {
+      production_trend(d, divId) {
+        return Plotly.newPlot(divId, [{
+          x: d.decades, y: d.counts,
+          type: "scatter", mode: "lines+markers",
+          line: { color: ACCENT, width: 3, shape: "spline" },
+          marker: { color: ACCENT, size: 8 },
+          fill: "tozeroy", fillcolor: "rgba(0,212,170,0.12)",
+          hovertemplate: "<b>%{x}s</b><br>%{y:,} films<extra></extra>",
+        }], {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: { text: "Decade", font: { color: TEXT_MUTED } } },
+          yaxis: { ...baseLayout.yaxis, title: { text: "Films Produced", font: { color: TEXT_MUTED } } },
+        }, config);
+      },
 
-    function renderProduction() {
-      if (rendered.production) return;
-      rendered.production = true;
-      const d = CHART_DATA.productionByYear;
-      Plotly.newPlot("chart-production", [{
-        x: d.years,
-        y: d.counts,
-        type: "bar",
-        marker: {
-          color: d.counts.map((_, i) => `hsla(${165 + i * 2}, 70%, ${38 + i * 0.5}%, 0.85)`),
-          line: { color: "rgba(0,0,0,0)", width: 0 }
-        },
-        hovertemplate: "<b>%{x}</b><br>%{y} films<extra></extra>"
-      }], {
-        ...baseLayout,
-        xaxis: { ...baseLayout.xaxis, tickmode: "linear", dtick: 2 },
-        bargap: 0.3
-      }, config);
-    }
+      genre_evolution(d, divId) {
+        const traces = d.genres.map((g, i) => ({
+          x: d.decades,
+          y: d.matrix.map((row) => row[i]),
+          name: g, type: "scatter", mode: "lines",
+          stackgroup: "one",
+          line: { width: 0.5, color: PALETTE[i % PALETTE.length] },
+          fillcolor: PALETTE[i % PALETTE.length],
+          hovertemplate: `<b>${g}</b><br>%{x}s: %{y:,} films<extra></extra>`,
+        }));
+        return Plotly.newPlot(divId, traces, {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: { text: "Decade", font: { color: TEXT_MUTED } } },
+          yaxis: { ...baseLayout.yaxis, title: { text: "Films (stacked)", font: { color: TEXT_MUTED } } },
+          showlegend: true,
+          legend: { ...baseLayout.legend, orientation: "h", y: -0.18 },
+        }, config);
+      },
 
-    function renderGenre() {
-      if (rendered.genre) return;
-      rendered.genre = true;
-      const d = CHART_DATA.genreDistribution;
-      const palette = [
-        "#00D4AA","#00B8D9","#6554C0","#FF5630","#FF8B00",
-        "#36B37E","#0052CC","#97A0AF","#403294","#00875A",
-        "#DE350B","#0065FF"
-      ];
-      Plotly.newPlot("chart-genre", [{
-        labels: d.labels,
-        values: d.values,
-        type: "pie",
-        hole: 0.52,
-        marker: { colors: palette, line: { color: "rgba(0,0,0,0)", width: 0 } },
-        textinfo: "label+percent",
-        textfont: { family: FONT_FAMILY, size: 11, color: "#F5F7FA" },
-        hovertemplate: "<b>%{label}</b><br>%{value} films (%{percent})<extra></extra>"
-      }], {
-        ...baseLayout,
-        margin: { t: 20, r: 20, b: 20, l: 20 },
-        showlegend: false
-      }, config);
-    }
+      genre_heatmap(d, divId) {
+        return Plotly.newPlot(divId, [{
+          z: d.matrix,
+          x: d.genres,
+          y: d.decades.map((dec) => `${dec}s`),
+          type: "heatmap",
+          colorscale: [
+            [0,    "#0A0E1A"],
+            [0.3,  "#1A3A5C"],
+            [0.6,  "#00B8D9"],
+            [1,    "#00D4AA"],
+          ],
+          hovertemplate: "<b>%{y} %{x}</b><br>Share: %{z:.1%}<extra></extra>",
+          colorbar: { tickfont: { color: TEXT_SEC }, thickness: 12, len: 0.8 },
+        }], {
+          ...baseLayout,
+          margin: { t: 20, r: 24, b: 80, l: 64 },
+          xaxis: { ...baseLayout.xaxis, title: { text: "Genre", font: { color: TEXT_MUTED } }, side: "bottom" },
+          yaxis: { ...baseLayout.yaxis, title: { text: "Decade", font: { color: TEXT_MUTED } }, autorange: "reversed" },
+        }, config);
+      },
 
-    function renderDirectors() {
-      if (rendered.directors) return;
-      rendered.directors = true;
-      const d = CHART_DATA.topDirectors;
-      Plotly.newPlot("chart-directors", [{
-        x: d.ratings,
-        y: d.names,
-        type: "bar",
-        orientation: "h",
-        marker: {
-          color: ACCENT,
-          opacity: 0.85,
-          line: { color: "rgba(0,0,0,0)", width: 0 }
-        },
-        text: d.ratings.map((r) => r.toFixed(1)),
-        textposition: "outside",
-        textfont: { color: TEXT_SEC, size: 11 },
-        hovertemplate: "<b>%{y}</b><br>Avg rating: %{x}<extra></extra>"
-      }], {
-        ...baseLayout,
-        margin: { t: 20, r: 60, b: 48, l: 160 },
-        xaxis: { ...baseLayout.xaxis, range: [7, 8.8], title: { text: "Average Rating", font: { color: TEXT_MUTED } } },
-        yaxis: { ...baseLayout.yaxis, autorange: "reversed", tickfont: { color: TEXT_SEC, size: 12 } },
-        bargap: 0.35
-      }, config);
-    }
+      budget_revenue(d, divId) {
+        const maxBudget = Math.max(...d.budget);
+        const lineX = [0, maxBudget];
+        const lineY = [d.regression.intercept, d.regression.intercept + d.regression.slope * maxBudget];
+        return Plotly.newPlot(divId, [
+          {
+            x: d.budget, y: d.revenue,
+            mode: "markers", type: "scatter",
+            marker: { color: ACCENT, size: 5, opacity: 0.35 },
+            name: `Films (n=${d.n_plotted.toLocaleString()})`,
+            hovertemplate: "Budget: $%{x:,.0f}<br>Revenue: $%{y:,.0f}<extra></extra>",
+          },
+          {
+            x: lineX, y: lineY,
+            mode: "lines", type: "scatter",
+            line: { color: "#FF5630", width: 2.5, dash: "solid" },
+            name: `Regression (slope ${d.regression.slope.toFixed(2)}×)`,
+            hoverinfo: "skip",
+          },
+        ], {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: { text: "Budget ($)", font: { color: TEXT_MUTED } }, type: "log" },
+          yaxis: { ...baseLayout.yaxis, title: { text: "Revenue ($)", font: { color: TEXT_MUTED } }, type: "log" },
+          showlegend: true,
+          legend: { ...baseLayout.legend, x: 0.02, y: 0.98 },
+        }, config);
+      },
 
-    function renderRatings() {
-      if (rendered.ratings) return;
-      rendered.ratings = true;
-      const d = CHART_DATA.ratingTrends;
-      const colors = ["#00D4AA","#00B8D9","#6554C0","#FF8B00","#36B37E"];
-      const traces = Object.entries(d.genres).map(([genre, vals], i) => ({
-        x: d.years,
-        y: vals,
-        name: genre,
-        type: "scatter",
-        mode: "lines+markers",
-        line: { color: colors[i], width: 2, shape: "spline" },
-        marker: { color: colors[i], size: 5 },
-        hovertemplate: `<b>${genre}</b><br>%{x}: %{y:.1f}<extra></extra>`
-      }));
-      Plotly.newPlot("chart-ratings", traces, {
-        ...baseLayout,
-        yaxis: { ...baseLayout.yaxis, range: [6.0, 8.2], title: { text: "Avg Rating", font: { color: TEXT_MUTED } } },
-        xaxis: { ...baseLayout.xaxis, title: { text: "Year", font: { color: TEXT_MUTED } } },
-        showlegend: true,
-        legend: { ...baseLayout.legend, x: 1, xanchor: "right", y: 1 }
-      }, config);
-    }
+      roi_by_genre(d, divId) {
+        const traces = d.genres.map((g, i) => ({
+          y: d.roi_by_genre[g], name: g, type: "box",
+          marker: { color: PALETTE[i % PALETTE.length] },
+          boxmean: true,
+        }));
+        return Plotly.newPlot(divId, traces, {
+          ...baseLayout,
+          xaxis: { ...baseLayout.xaxis, title: { text: "Genre", font: { color: TEXT_MUTED } } },
+          yaxis: { ...baseLayout.yaxis, title: { text: `ROI (capped at ${d.roi_cap}×)`, font: { color: TEXT_MUTED } } },
+          showlegend: false,
+        }, config);
+      },
 
-    const renderers = {
-      production: renderProduction,
-      genre:      renderGenre,
-      directors:  renderDirectors,
-      ratings:    renderRatings
+      financial_correlation(d, divId) {
+        const annotations = [];
+        for (let i = 0; i < d.matrix.length; i++) {
+          for (let j = 0; j < d.matrix[i].length; j++) {
+            const v = d.matrix[i][j];
+            annotations.push({
+              x: d.variables[j], y: d.variables[i],
+              text: v.toFixed(2),
+              showarrow: false,
+              font: { color: Math.abs(v) > 0.5 ? "#0A0E1A" : "#F5F7FA", family: FONT_FAMILY, size: 12 },
+            });
+          }
+        }
+        return Plotly.newPlot(divId, [{
+          z: d.matrix,
+          x: d.variables, y: d.variables,
+          type: "heatmap",
+          colorscale: [
+            [0,   "#FF5630"],
+            [0.5, "#0A0E1A"],
+            [1,   "#00D4AA"],
+          ],
+          zmin: -1, zmax: 1,
+          hovertemplate: "<b>%{y} ↔ %{x}</b><br>r = %{z:.3f}<extra></extra>",
+          colorbar: { tickfont: { color: TEXT_SEC }, thickness: 12, len: 0.8 },
+        }], {
+          ...baseLayout,
+          margin: { t: 20, r: 24, b: 64, l: 80 },
+          xaxis: { ...baseLayout.xaxis, side: "bottom" },
+          yaxis: { ...baseLayout.yaxis, autorange: "reversed" },
+          annotations,
+        }, config);
+      },
     };
 
-    // ── Tab switching ─────────────────────────────────────────────────────
-    const tabs   = document.querySelectorAll(".chart-tab");
-    const panels = document.querySelectorAll(".chart-panel");
+    // ── Chart loader: fetch + render once, cache to avoid duplicate calls ──
+    const loaded = {};
+    function loadChart(name, divId) {
+      if (loaded[name]) {
+        // Force resize after panel becomes visible
+        Plotly.relayout(divId, {});
+        return;
+      }
+      loaded[name] = true;
+      fetch(`/api/charts/${name}`)
+        .then((r) => r.json())
+        .then((data) => wrappers[name](data, divId))
+        .catch((err) => {
+          console.error(`Failed to load chart ${name}:`, err);
+          loaded[name] = false;
+        });
+    }
 
-    tabs.forEach((tab) => {
+    // ── Group toggle (Trends / Financials) ────────────────────────────
+    const groupTabs = document.querySelectorAll("[data-group]");
+    const groupPanels = document.querySelectorAll("[data-group-panel]");
+    groupTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
-        const target = tab.dataset.tab;
-
-        // Update tab active state
-        tabs.forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
-        tab.classList.add("active");
-        tab.setAttribute("aria-selected", "true");
-
-        // Fade out current panel, swap, fade in
-        const current = document.querySelector(".chart-panel.active");
-        const next    = document.getElementById(`panel-${target}`);
-        if (current === next) return;
-
-        current.classList.add("fading");
-        setTimeout(() => {
-          current.classList.remove("active", "fading");
-          next.classList.add("active");
-          // Render chart lazily on first show
-          renderers[target]();
-          // Force Plotly resize after display:block
-          const plotEl = next.querySelector("[id^='chart-']");
-          if (plotEl && plotEl.data) Plotly.relayout(plotEl.id, {});
-        }, 200);
+        const group = tab.dataset.group;
+        groupTabs.forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
+        tab.classList.add("active"); tab.setAttribute("aria-selected", "true");
+        groupPanels.forEach((p) => {
+          p.style.display = p.dataset.groupPanel === group ? "" : "none";
+        });
+        // Render the active sub-chart of the newly visible group
+        const activeGroup = document.querySelector(`[data-group-panel="${group}"]`);
+        const activeTab = activeGroup.querySelector(".chart-tab.active");
+        if (activeTab) loadChart(activeTab.dataset.chart, activeTab.dataset.target);
       });
     });
 
-    // Render first chart immediately
-    renderProduction();
+    // ── Sub-tab switching within each group ────────────────────────────
+    document.querySelectorAll("[data-group-panel] .chart-tabs").forEach((tabBar) => {
+      const tabs = tabBar.querySelectorAll(".chart-tab");
+      const panelHost = tabBar.parentElement;
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const target = tab.dataset.chart;
+          tabs.forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
+          tab.classList.add("active"); tab.setAttribute("aria-selected", "true");
+
+          const panels = panelHost.querySelectorAll(".chart-panel");
+          panels.forEach((p) => p.classList.remove("active"));
+          const next = panelHost.querySelector(`#panel-${target}`);
+          if (next) next.classList.add("active");
+
+          loadChart(target, tab.dataset.target);
+        });
+      });
+    });
+
+    // Render the initially-visible chart (Production Trend)
+    loadChart("production_trend", "chart-production");
   </script>
 </body>
 </html>

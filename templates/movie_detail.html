@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Movie Detail - Reelvana</title>
+  <title>{{ movie.title }} - Reelvana</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -23,19 +23,19 @@
     </div>
     <ul class="sidebar-nav">
       <li>
-        <a href="movie_list.html" class="nav-link active" data-page="movies">
+        <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
           <i data-lucide="film"></i>
           <span>Movies</span>
         </a>
       </li>
       <li>
-        <a href="analysis.html" class="nav-link" data-page="analysis">
+        <a href="/analysis" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
           <i data-lucide="bar-chart-3"></i>
           <span>Analysis</span>
         </a>
       </li>
       <li>
-        <a href="recommend.html" class="nav-link" data-page="recommend">
+        <a href="/recommender" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
           <i data-lucide="sparkles"></i>
           <span>Recommend</span>
         </a>
@@ -44,90 +44,72 @@
   </nav>
 
   <!-- Main Content -->
-  <main class="main-content" id="detail-content">
-    <!-- Populated by JS -->
+  <main class="main-content">
+    <a href="{{ url_for('page_movie_list') }}" class="back-btn">
+      <i data-lucide="arrow-left"></i>
+      Movies
+    </a>
+
+    <div class="detail-layout">
+      {% if movie.poster_url %}
+        <div class="detail-poster" style="background-image:url('{{ movie.poster_url }}');background-size:cover;background-position:center"></div>
+      {% else %}
+        <div class="detail-poster" id="poster-fallback" data-id="{{ movie.id }}">
+          <i data-lucide="film" class="detail-poster-icon"></i>
+        </div>
+      {% endif %}
+
+      <div class="detail-body">
+        <h1 class="detail-title">{{ movie.title }}</h1>
+
+        <div class="detail-genres">
+          {% for g in movie.genres %}
+            <span class="detail-genre-tag">{{ g }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="detail-stats">
+          <div class="stat-item">
+            <span class="stat-label">Rating</span>
+            <span class="stat-value rating-value">★ {{ "%.1f"|format(movie.vote_average) if movie.vote_average is not none else "—" }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Year</span>
+            <span class="stat-value">{{ movie.release_year if movie.release_year else "—" }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Director</span>
+            <span class="stat-value">{{ movie.director if movie.director else "—" }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Genre</span>
+            <span class="stat-value">{{ movie.primary_genre if movie.primary_genre else "—" }}</span>
+          </div>
+        </div>
+
+        <div class="detail-overview-section">
+          <span class="stat-label" style="display:block;margin-bottom:10px">Overview</span>
+          <p class="detail-overview">{{ movie.overview if movie.overview else "No overview available." }}</p>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <script src="../static/mock_data.js"></script>
   <script>
+    // Apply gradient placeholder to poster fallback (when no poster file exists)
     (function () {
-      function getPosterGradient(id) {
-        const hue1 = (id * 137.508) % 360;
-        const hue2 = (hue1 + 40) % 360;
-        const hue3 = (hue1 + 80) % 360;
-        const sat  = 55 + (id % 3) * 10;
-        const l1   = 18 + (id % 4) * 4;
-        const l2   = 12 + (id % 3) * 3;
-        return `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
-      }
-
-      const params = new URLSearchParams(window.location.search);
-      const id = parseInt(params.get("id"), 10);
-      const movie = MOCK_MOVIES.find((m) => m.id === id);
-      const container = document.getElementById("detail-content");
-
-      if (!movie) {
-        container.innerHTML = `
-          <div class="empty-state" style="padding-top:120px">
-            <i data-lucide="film"></i>
-            <p>Movie not found.</p>
-          </div>`;
-        lucide.createIcons();
-        return;
-      }
-
-      document.title = `${movie.title} - Reelvana`;
-
-      const genreTags = movie.genres
-        .map((g) => `<span class="detail-genre-tag">${g}</span>`)
-        .join("");
-
-      container.innerHTML = `
-        <a href="movie_list.html" class="back-btn">
-          <i data-lucide="arrow-left"></i>
-          Movies
-        </a>
-
-        <div class="detail-layout">
-          <div class="detail-poster" style="background:${getPosterGradient(movie.id)}">
-            <i data-lucide="film" class="detail-poster-icon"></i>
-          </div>
-
-          <div class="detail-body">
-            <h1 class="detail-title">${movie.title}</h1>
-
-            <div class="detail-genres">
-              ${genreTags}
-            </div>
-
-            <div class="detail-stats">
-              <div class="stat-item">
-                <span class="stat-label">Rating</span>
-                <span class="stat-value rating-value">★ ${movie.vote_average.toFixed(1)}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Year</span>
-                <span class="stat-value">${movie.release_year}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Director</span>
-                <span class="stat-value">${movie.director}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Genre</span>
-                <span class="stat-value">${movie.primary_genre}</span>
-              </div>
-            </div>
-
-            <div class="detail-overview-section">
-              <span class="stat-label" style="display:block;margin-bottom:10px">Overview</span>
-              <p class="detail-overview">${movie.overview}</p>
-            </div>
-          </div>
-        </div>`;
-
-      lucide.createIcons();
+      const el = document.getElementById("poster-fallback");
+      if (!el) return;
+      const id = parseInt(el.dataset.id, 10);
+      const hue1 = (id * 137.508) % 360;
+      const hue2 = (hue1 + 40) % 360;
+      const hue3 = (hue1 + 80) % 360;
+      const sat = 55 + (id % 3) * 10;
+      const l1 = 18 + (id % 4) * 4;
+      const l2 = 12 + (id % 3) * 3;
+      el.style.background = `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
     })();
+    lucide.createIcons();
   </script>
 </body>
 </html>

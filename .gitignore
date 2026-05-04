@@ -1,6 +1,9 @@
 # Large raw data files (too big for GitHub)
 data/raw/
 
+# Movie poster images (8473 files, ~600 MB total)
+static/posters/
+
 # Word temp files
 ~$*
 
