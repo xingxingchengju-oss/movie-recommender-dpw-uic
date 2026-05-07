@@ -228,3 +228,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Notebook generated outputs (optional - keep if figures should be regenerated each time)
+# notebooks/figures/

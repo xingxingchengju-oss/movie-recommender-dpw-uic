@@ -45,22 +45,44 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <div class="page-header">
-      <h1 class="page-title">Movies</h1>
-      <p class="page-subtitle" id="movie-count"></p>
+    <div class="page-head-row">
+      <div class="page-header">
+        <h1 class="page-title">Movies</h1>
+        <p class="page-subtitle" id="movie-count"></p>
+      </div>
+
+      <!-- Search bar with autocomplete dropdown -->
+      <div class="search-wrap" id="search-wrap">
+        <div class="search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input
+            type="text" id="search-input" class="search-input"
+            placeholder="Search films by title…"
+            autocomplete="off" spellcheck="false"
+          />
+          <span class="search-spinner" id="search-spinner" aria-hidden="true"></span>
+          <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="search-dropdown" id="search-dropdown" role="listbox">
+          <!-- Suggestions injected by script.js -->
+        </div>
+      </div>
     </div>
 
     <!-- Toolbar: Sort + Genre Filters -->
     <div class="toolbar">
       <div class="sort-row">
-        <span class="sort-label">Sort By</span>
         <div class="custom-select" id="sort-select" data-value="normal">
           <button class="custom-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span class="custom-select-prefix">Sort:</span>
             <span class="custom-select-value">Normal</span>
             <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <ul class="custom-select-dropdown" role="listbox">
             <li class="custom-select-option active" data-value="normal" role="option">Normal</li>
+            <li class="custom-select-option" data-value="popular" role="option" title="Highly rated AND widely voted (Bayesian-weighted)">Popular</li>
             <li class="custom-select-option" data-value="rate" role="option">Rating</li>
             <li class="custom-select-option" data-value="date" role="option">Date</li>
           </ul>

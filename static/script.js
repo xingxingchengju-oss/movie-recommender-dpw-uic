@@ -2,6 +2,7 @@
   const ALL = "All";
   let currentGenre = ALL;
   let currentSort = "normal";
+  let currentQuery = "";
   let currentPage = 1;
   let totalPages = 1;
   let isLoading = false;
@@ -90,6 +91,7 @@
       sort: currentSort,
     });
     if (currentGenre !== ALL) params.set("genre", currentGenre);
+    if (currentQuery) params.set("q", currentQuery);
 
     return fetch(`/api/movies?${params.toString()}`)
       .then((r) => r.json())
@@ -173,7 +175,9 @@
     options.forEach((opt) => {
       opt.addEventListener("click", () => {
         currentSort = opt.dataset.value;
-        valueEl.textContent = opt.textContent;
+        // Use the full visible label (e.g. "Popular") not just the option's
+        // shorter label — copy from the option text to keep them in sync.
+        valueEl.textContent = opt.textContent.trim();
         options.forEach((o) => o.classList.remove("active"));
         opt.classList.add("active");
         sortWidget.classList.remove("open");
@@ -196,6 +200,167 @@
     renderGenreTags();
     reload();
   });
+
+  // ── Search with autocomplete dropdown ─────────────────────────────────
+  const searchWrap     = document.getElementById("search-wrap");
+  const searchInput    = document.getElementById("search-input");
+  const searchDropdown = document.getElementById("search-dropdown");
+  const searchSpinner  = document.getElementById("search-spinner");
+  const searchClear    = document.getElementById("search-clear");
+
+  if (searchInput && searchDropdown) {
+    let debounceTimer = null;
+    let currentSearchAbort = null;
+    const MIN_CHARS = 2;
+    const DEBOUNCE_MS = 250;
+
+    function escapeHTML(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function highlightMatch(title, query) {
+      if (!query) return escapeHTML(title);
+      const safeTitle = escapeHTML(title);
+      const safeQuery = escapeHTML(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return safeTitle.replace(new RegExp(`(${safeQuery})`, "ig"), "<mark>$1</mark>");
+    }
+
+    function suggestionRow(m, query) {
+      const poster = m.poster_url
+        ? `<div class="sug-poster" style="background-image:url('${m.poster_url}');background-size:cover;background-position:center"></div>`
+        : `<div class="sug-poster" style="background:${getPosterGradient(m.id)}"></div>`;
+      const year = m.release_year != null ? m.release_year : "—";
+      const rating = m.vote_average != null ? m.vote_average.toFixed(1) : "—";
+      return `
+        <a class="sug-row" href="/movie/${m.id}" role="option">
+          ${poster}
+          <div class="sug-meta">
+            <div class="sug-title">${highlightMatch(m.title, query)}</div>
+            <div class="sug-sub">${year}</div>
+          </div>
+          <div class="sug-rating">★ ${rating}</div>
+        </a>`;
+    }
+
+    function renderDropdown(state, payload) {
+      searchDropdown.classList.add("open");
+      if (state === "loading") {
+        searchDropdown.innerHTML = `<div class="sug-status">Searching…</div>`;
+      } else if (state === "empty") {
+        searchDropdown.innerHTML =
+          `<div class="sug-status">No films match <strong>${escapeHTML(payload)}</strong>.</div>`;
+      } else if (state === "results") {
+        const { movies, total, query } = payload;
+        const rows = movies.map((m) => suggestionRow(m, query)).join("");
+        const more = total > movies.length
+          ? `<button class="sug-viewall" type="button" data-query="${escapeHTML(query)}">View all ${total.toLocaleString()} results →</button>`
+          : "";
+        searchDropdown.innerHTML = rows + more;
+      }
+    }
+
+    function closeDropdown() {
+      searchDropdown.classList.remove("open");
+      searchDropdown.innerHTML = "";
+    }
+
+    function applySearchToGrid(query) {
+      currentQuery = query;
+      reload();
+      closeDropdown();
+    }
+
+    async function searchMovies(query) {
+      if (currentSearchAbort) currentSearchAbort.abort();
+      currentSearchAbort = new AbortController();
+      searchSpinner.classList.add("active");
+      try {
+        const r = await fetch(
+          `/api/movies?q=${encodeURIComponent(query)}&per_page=5`,
+          { signal: currentSearchAbort.signal }
+        );
+        const data = await r.json();
+        if (data.total === 0) {
+          renderDropdown("empty", query);
+        } else {
+          renderDropdown("results", { movies: data.movies, total: data.total, query });
+        }
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          console.error("Search failed:", e);
+          searchDropdown.innerHTML = `<div class="sug-status">Search error.</div>`;
+        }
+      } finally {
+        searchSpinner.classList.remove("active");
+      }
+    }
+
+    searchInput.addEventListener("input", (e) => {
+      const q = e.target.value.trim();
+      searchClear.classList.toggle("visible", q.length > 0);
+      clearTimeout(debounceTimer);
+      if (q.length < MIN_CHARS) {
+        if (currentSearchAbort) currentSearchAbort.abort();
+        searchSpinner.classList.remove("active");
+        closeDropdown();
+        // If user wiped the query, reset the grid to unfiltered
+        if (q.length === 0 && currentQuery) {
+          currentQuery = "";
+          reload();
+        }
+        return;
+      }
+      renderDropdown("loading");
+      debounceTimer = setTimeout(() => searchMovies(q), DEBOUNCE_MS);
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeDropdown();
+        searchInput.blur();
+      } else if (e.key === "Enter") {
+        const q = searchInput.value.trim();
+        if (q.length >= MIN_CHARS) applySearchToGrid(q);
+      }
+    });
+
+    searchInput.addEventListener("focus", () => {
+      const q = searchInput.value.trim();
+      if (q.length >= MIN_CHARS && searchDropdown.children.length) {
+        searchDropdown.classList.add("open");
+      }
+    });
+
+    searchClear.addEventListener("click", () => {
+      searchInput.value = "";
+      searchClear.classList.remove("visible");
+      closeDropdown();
+      if (currentQuery) {
+        currentQuery = "";
+        reload();
+      }
+      searchInput.focus();
+    });
+
+    searchDropdown.addEventListener("click", (e) => {
+      const viewAll = e.target.closest(".sug-viewall");
+      if (viewAll) {
+        e.preventDefault();
+        applySearchToGrid(viewAll.dataset.query);
+      }
+      // Suggestion rows are <a> — let default navigation happen
+    });
+
+    // Close dropdown when clicking outside the search wrap
+    document.addEventListener("click", (e) => {
+      if (!searchWrap.contains(e.target)) closeDropdown();
+    });
+  }
 
   // Bootstrap: load genres then first page
   fetch("/api/genres")

@@ -81,6 +81,17 @@ def load_movies():
     poster_lookup = _build_poster_lookup(df["id"].astype(str).tolist())
     df["poster_url"] = df["id"].astype(str).map(poster_lookup)
 
+    # IMDb-style Bayesian-weighted score for the "Popular" sort. Movies with
+    # few votes get pulled toward the global mean; only films that are both
+    # well-rated AND widely-voted float to the top. Computed once at startup.
+    rated = df[df["vote_count"] > 0]
+    C = float(rated["vote_average"].mean())
+    m = float(rated["vote_count"].quantile(0.90))
+    v = df["vote_count"].fillna(0)
+    R = df["vote_average"].fillna(C)
+    df["weighted_score"] = (v / (v + m)) * R + (m / (v + m)) * C
+    print(f"[data_loader] Popular ranking: C={C:.2f}, m={m:.0f} (90th-pct vote_count)")
+
     genres_set = sorted(CANONICAL_GENRES)
     return df, genres_set
 

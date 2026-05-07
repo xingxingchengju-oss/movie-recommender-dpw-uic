@@ -1,7 +1,8 @@
 # Reelvana — Project Status Report
 **Course:** CST3104 Software Development Workshop II, UIC, Spring 2025-2026  
-**Last Updated:** 2026-05-04  
-**Purpose:** Onboarding snapshot for Claude project — reflects current repo state and completion plan.
+**Last Updated:** 2026-05-06  
+**Status:** ✅ **V1 shipped** — all five phases complete (foundation, real-data wiring, dashboard, EDA notebook, polish + Popular ranking + search autocomplete)
+**Purpose:** Onboarding snapshot for Claude project — reflects current repo state.
 
 ---
 
@@ -136,125 +137,52 @@ Only **4,859 of the 22,620 movies** resolve to a poster on disk (the upper bound
 
 ---
 
-## 4. What's Complete
+## 4. V1 Completion Status — ✅ Shipped
 
-### Frontend (100%)
-- **Dark theme UI** fully implemented in `style.css` — CSS variables, sidebar, card animations, custom dropdowns
-- **Movie list page** — genre filter tags, sort by rating/date, card grid with gradient placeholders
-- **Movie detail page** — poster area, metadata stats, overview text
-- **Analysis dashboard** — 4 Plotly.js tabs (Production by Year, Genre Distribution, Top Directors, Rating Trends), KPI cards with entrance animation
-- Currently powered by `mock_data.js` (25 hardcoded movies + mock chart data)
+### Backend (`app.py` + `data_loader.py` + `analysis.py` + `recommender.py`)
+- Flask app loads CSV at startup in ~3 seconds, builds in-memory DataFrame + poster lookup + Bayesian-weighted score column
+- 9 API endpoints (genres, movies list with filter/sort/search/pagination, single-movie detail, 9 chart data, KPI summary)
+- Recommender stub raises `NotImplementedError` — V2 placeholder route renders a "Coming in V2" card
 
-### Data & Analysis (100%)
-- Cleaned datasets ready in `data/processed/`
-- Q1 analysis complete (production trends, genre evolution by decade) — see `docs/analysis/q1/`
-- Q2 analysis complete (budget vs revenue regression, ROI by genre, correlation heatmap) — see `docs/analysis/q2/`
-- MATLAB source scripts in `docs/analysis/q1.m` and `q2.m`
+### Frontend (`templates/` + `static/`)
+- `mock_data.js` deleted; all data flows from real APIs
+- Movie list: paginated grid, infinite scroll via IntersectionObserver, 4 sort modes (Normal / **Popular** / Rating / Date), genre tag filter, **live search dropdown** with debounce + AbortController + match highlighting + "View all N results" expansion
+- Movie detail: Jinja-rendered, real poster or gradient fallback, all metadata fields
+- Analysis: 9 Plotly charts in 3 thematic groups (Trends / Financials / Audience), per-group accent color, chip-style sub-tabs, Insight banner under each chart, section narrative on top
+- Recommender: minimal placeholder card with V2 roadmap pill
 
----
-
-## 5. What's Missing (Backend = 0%)
-
-| File | What it needs to do |
-|------|---------------------|
-| `requirements.txt` | flask, pandas, scikit-learn, numpy |
-| `app.py` | Flask routes: `/`, `/movie/<id>`, `/analysis`, `/api/movies`, `/api/recommend` |
-| `recommender.py` | Load movies_final_clean.csv → TF-IDF on overview+genres_parsed+keywords_parsed → cosine similarity matrix → return top-N |
-| `analysis.py` | Functions that read data and return JSON for each chart in analysis.html |
+### EDA notebook (`notebooks/eda.ipynb`)
+- Re-implements Q1 + Q2 charts in matplotlib (6 figures)
+- Imports from `analysis.py` — single source of truth, never drifts from dashboard
+- Exports each figure as both PNG (300dpi for slides) + PDF (vector for report) into `notebooks/figures/`
+- `plot_style.py` provides the dark theme + 3 palettes (categorical / sequential / diverging)
 
 ---
 
-## 6. Key Design Constraints
+## 5. Key Implementation Decisions
 
-- **Data cutoff:** All data ≤ July 2017. No external API calls needed.
-- **Startup pre-compute:** TF-IDF matrix built once on `app.py` startup, held in memory. No database, no persistence.
-- **NaN handling:** `budget=NaN` and `revenue=NaN` mean undisclosed — always exclude from financial stats.
-- **One file per layer:** `app.py` (routes), `recommender.py` (ML), `analysis.py` (chart data). Don't split further.
-- **Poster serving:** Flask serves `static/posters/tt{imdb_id}.jpg`. Fall back to CSS gradient when file missing.
-- **No heavy deps:** pandas, scikit-learn, flask only. No database, no Celery, no Redis.
+- **Bayesian-weighted "Popular" sort** — IMDb formula `WR = v/(v+m)·R + m/(v+m)·C` with `C = global mean rating`, `m = 90th percentile vote_count`. Top 10 are mainstream classics (Shawshank, Godfather, Dark Knight, Pulp Fiction, Forrest Gump, …) instead of obscure documentaries with 5 votes.
+- **Search architecture** — backend already exposes `?q=` on `/api/movies`. Frontend wraps it with 250ms debounce, AbortController to cancel stale requests, min-2-chars guard, dropdown with poster thumbnails + match highlighting, ESC/click-outside to close.
+- **Chart data layer purity** — `analysis.py` returns plain dicts, never Plotly/matplotlib config. Decouples calculation from visualization, lets dashboard (Plotly.js) and notebook (matplotlib) share the same logic.
+- **Data filters** — Genre Evolution / Heatmap drop decades < 50 films (avoid 100% blocks from 1-3 film samples). Rating Trend drops decades < 20 films. ROI by Genre filters to ROI ≥ 1.0 (broke-even and above) for log-scale legibility. All filters declared in function defaults so notebook + dashboard agree.
 
 ---
 
-## 7. Completion Plan (Solo, ~3–4 Days)
+## 6. V2 Roadmap
 
-### Day 1 — Backend Foundation
-**Goal:** Flask app serving real data, movie list and detail pages functional.
-
-1. Write `requirements.txt`:
-   ```
-   flask
-   pandas
-   scikit-learn
-   numpy
-   ```
-2. Write `app.py` skeleton — load `movies_final_clean.csv` at startup into a pandas DataFrame.
-3. Implement `GET /api/movies` — return paginated/filtered JSON from DataFrame.
-4. Implement `GET /api/movie/<tmdb_id>` — return single movie JSON + poster URL.
-5. Update `movie_list.html` and `movie_detail.html` to fetch from API instead of `mock_data.js`.
-6. Add poster URL logic: check if `static/posters/tt{imdb_id}.jpg` exists via `data/raw/links.csv` join; fall back to gradient.
-
-### Day 2 — Recommender
-**Goal:** `/recommender` page returns real TF-IDF recommendations.
-
-1. Write `recommender.py`:
-   - Load `movies_final_clean.csv`
-   - Build TF-IDF on `overview + " " + genres_parsed + " " + keywords_parsed`
-   - Compute full cosine similarity matrix
-   - Expose `get_recommendations(movie_id, n=10)` → list of movie dicts
-2. Add `GET /api/recommend?id=<tmdb_id>&n=10` route in `app.py`.
-3. Wire up frontend: search box on recommender page → call API → render card grid (reuse existing card HTML).
-
-### Day 3 — Analysis Dashboard
-**Goal:** `analysis.html` shows real data from `movies_final_clean.csv`.
-
-1. Write `analysis.py` with functions mirroring the q1/q2 MATLAB analysis:
-   - `production_by_decade()` → dict for bar chart
-   - `genre_distribution()` → dict for pie/donut chart
-   - `top_directors(n=10)` → dict for horizontal bar chart
-   - `rating_trends_by_genre()` → dict for multi-line chart
-   - `budget_revenue_scatter()` → dict for scatter (Q2)
-   - `roi_by_genre()` → dict for box chart (Q2)
-   - `financial_correlation()` → dict for heatmap (Q2)
-2. Add `GET /api/analysis/<chart_name>` routes in `app.py`.
-3. Update `analysis.html` to fetch from API instead of `CHART_DATA` mock object.
-4. Update KPI cards (Total Movies, Avg Rating, Top Genre, Total Revenue) from real data.
-
-### Day 4 — Polish & Wrapup
-1. Remove `mock_data.js` from templates (or keep as fallback if no Flask running).
-2. Add a simple text search on movie list page (filter by title).
-3. Test all routes end-to-end.
-4. Update `README.md` with run instructions (`pip install -r requirements.txt && python app.py`).
-5. Verify `data/raw/` and `static/posters/` are git-ignored (confirmed in `.gitignore`).
+| Feature | What changes |
+|---------|--------------|
+| TF-IDF recommender | Implement `recommender.py:get_recommendations()`, wire `/api/recommend?id=<tmdb_id>&n=10`, replace placeholder card with similar-films grid on movie detail page |
+| User auth + ratings history | Bind anonymous ratings (`ratings_clean.csv`) to login, expose "your taste profile" in dashboard |
+| Frontend redesign | V1 prioritizes data correctness; V2 will revamp visual hierarchy + transitions |
+| Real-time TMDB API | Optional supplement — current dataset is frozen ≤ July 2017 |
 
 ---
 
-## 8. Quick Reference — Data Loading Pattern
+## 7. Files to Ignore / Not Modify
 
-```python
-# Standard pattern for app.py startup
-import pandas as pd
-
-df_movies = pd.read_csv('data/processed/movies_final_clean.csv')
-df_ratings = pd.read_csv('data/processed/ratings_clean.csv')
-df_links = pd.read_csv('data/raw/links.csv')  # movieId, imdbId, tmdbId
-
-# Build TMDB id → imdb_id lookup for poster URLs
-links_map = df_links.set_index('tmdbId')['imdbId'].to_dict()
-# imdbId in links.csv is numeric; poster filenames use tt-format (zero-padded to 7 digits)
-# e.g. imdbId=114709 → "tt0114709"
-def get_poster_url(tmdb_id):
-    imdb_num = links_map.get(tmdb_id)
-    if imdb_num:
-        return f"/static/posters/tt{int(imdb_num):07d}.jpg"
-    return None  # frontend falls back to gradient
-```
-
----
-
-## 9. Files to Ignore / Not Modify
-
-- `data/raw/` — raw source data, do not touch
+- `data/raw/` — raw source data, git-ignored, do not touch
 - `data/processed/` — cleaned data, treat as read-only
-- `static/posters/` — 8,473 images, git-ignored
-- `docs/analysis/` — completed analysis artifacts for reference only
+- `static/posters/` — 8,473 images, git-ignored, ~600MB
+- `docs/analysis/` — team's MATLAB Q1/Q2 baseline (kept as visual comparison)
 - `docs/SoftwareDesignSpecification_1.3(4).docx` — design doc

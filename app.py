@@ -17,6 +17,11 @@ def page_movie_list():
     return render_template("movie_list.html", active_page="movies")
 
 
+@app.route("/recommender")
+def page_recommender():
+    return render_template("recommender.html", active_page="recommender")
+
+
 @app.route("/movie/<int:movie_id>")
 def page_movie_detail(movie_id):
     rows = DF_MOVIES[DF_MOVIES["id"] == movie_id]
@@ -84,7 +89,9 @@ def api_movies():
     if q:
         df = df[df["title"].str.contains(q, case=False, na=False)]
 
-    if sort == "rate":
+    if sort == "popular":
+        df = df.sort_values("weighted_score", ascending=False, na_position="last")
+    elif sort == "rate":
         df = df.sort_values("vote_average", ascending=False, na_position="last")
     elif sort == "date":
         df = df.sort_values("release_year", ascending=False, na_position="last")
