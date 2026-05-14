@@ -2,6 +2,7 @@ from flask import Flask, abort, jsonify, render_template, request
 
 import analysis
 import config
+import recommender
 from data_loader import load_movies, movie_to_detail_dict, movie_to_list_dict
 
 app = Flask(__name__)
@@ -10,6 +11,12 @@ print("[startup] Loading movies dataset...")
 DF_MOVIES, GENRES = load_movies()
 print(f"[startup] Loaded {len(DF_MOVIES)} movies, {len(GENRES)} unique genres, "
       f"{DF_MOVIES['poster_url'].notna().sum()} with posters.")
+
+print("[startup] Building recommender index...")
+recommender.build(DF_MOVIES)
+_rec_status = recommender.get_status()
+print(f"[startup] Recommender ready: {_rec_status['n_movies']} movies × "
+      f"{_rec_status['n_features']} features")
 
 
 @app.route("/")
@@ -64,6 +71,22 @@ def api_movie_detail(movie_id):
     if rows.empty:
         return jsonify({"error": "movie not found"}), 404
     return jsonify(movie_to_detail_dict(rows.iloc[0]))
+
+
+@app.route("/api/recommend/<int:movie_id>")
+def api_recommend(movie_id):
+    try:
+        n = max(1, min(int(request.args.get("n", 10)), 50))
+    except ValueError:
+        n = 10
+    recs = recommender.get_recommendations(movie_id, n)
+    if not recs:
+        return jsonify({
+            "error": "no recommendations available",
+            "hint": "movie may be non-English or not in the index",
+            "recommendations": [],
+        }), 404
+    return jsonify({"recommendations": recs})
 
 
 @app.route("/api/movies")

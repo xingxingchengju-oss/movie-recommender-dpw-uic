@@ -46,28 +46,25 @@
   <main class="main-content">
     <div class="page-header">
       <h1 class="page-title">Recommend</h1>
-      <p class="page-subtitle">Personalised film discovery</p>
+      <p class="page-subtitle">Pick a film you love — get similar suggestions</p>
     </div>
 
-    <div class="placeholder-card">
-      <div class="placeholder-icon">
-        <i data-lucide="sparkles"></i>
-      </div>
-      <h2 class="placeholder-title">Coming in V2</h2>
-      <p class="placeholder-text">
-        The recommender engine is in development.
-        It will use TF-IDF on each film's overview, genres, and keywords,
-        ranked by cosine similarity to surface "more like this" suggestions
-        instantly from any movie detail page.
-      </p>
-      <div class="placeholder-roadmap">
-        <span class="roadmap-pill">V2 · ML</span>
-        <span class="roadmap-arrow">→</span>
-        <span class="roadmap-text">TF-IDF + cosine similarity, ~22,620 film index, in-memory</span>
-      </div>
+    <div class="rec-search-wrap">
+      <input
+        type="text"
+        id="rec-search"
+        class="rec-search-input"
+        placeholder="Search for a movie (e.g. Inception, Toy Story, The Godfather)…"
+        autocomplete="off"
+      />
+      <ul id="rec-suggestions" class="rec-suggestions" role="listbox"></ul>
     </div>
+
+    <div id="rec-selected" class="rec-selected"></div>
+    <div id="rec-results" class="movie-grid"></div>
   </main>
 
   <script>lucide.createIcons();</script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

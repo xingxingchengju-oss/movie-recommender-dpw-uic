@@ -1,3 +1,66 @@
+// ── Shared helpers (used by movie list, movie detail recs, recommender page) ──
+function getPosterGradient(id) {
+  const hue1 = (id * 137.508) % 360;
+  const hue2 = (hue1 + 40) % 360;
+  const hue3 = (hue1 + 80) % 360;
+  const sat = 55 + (id % 3) * 10;
+  const l1 = 18 + (id % 4) * 4;
+  const l2 = 12 + (id % 3) * 3;
+  return `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
+}
+
+function escapeHTML(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function observeCards(cards) {
+  if (!("IntersectionObserver" in window)) {
+    cards.forEach((c) => c.classList.add("is-visible"));
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) =>
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add("is-visible");
+          io.unobserve(e.target);
+        }
+      }),
+    { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+  );
+  cards.forEach((c) => io.observe(c));
+}
+
+function renderMovieCard(m, indexOffset) {
+  const poster = m.poster_url
+    ? `<div class="movie-poster" style="background-image:url('${m.poster_url}');background-size:cover;background-position:center"></div>`
+    : `<div class="movie-poster" style="background:${getPosterGradient(m.id)}">
+         <i data-lucide="film" class="poster-icon"></i>
+       </div>`;
+  const rating = m.vote_average != null ? m.vote_average.toFixed(1) : "—";
+  const year = m.release_year != null ? m.release_year : "—";
+  const delay = ((indexOffset || 0) % 24) * 0.04;
+  return `
+    <a href="/movie/${m.id}" class="movie-card" data-id="${m.id}" style="animation-delay:${delay}s">
+      ${poster}
+      <div class="movie-info">
+        <div class="movie-title">${escapeHTML(m.title)}</div>
+        <div class="movie-meta">
+          <span class="movie-year">${year}</span>
+          <span class="movie-rating">
+            <svg viewBox="0 0 24 24" fill="#F5C518" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+            ${rating}
+          </span>
+        </div>
+      </div>
+    </a>`;
+}
+
 (function () {
   const ALL = "All";
   let currentGenre = ALL;
@@ -18,34 +81,6 @@
   let sentinel = null;
   let scrollObserver = null;
 
-  function getPosterGradient(id) {
-    const hue1 = (id * 137.508) % 360;
-    const hue2 = (hue1 + 40) % 360;
-    const hue3 = (hue1 + 80) % 360;
-    const sat = 55 + (id % 3) * 10;
-    const l1 = 18 + (id % 4) * 4;
-    const l2 = 12 + (id % 3) * 3;
-    return `radial-gradient(ellipse at 30% 20%, hsl(${hue1},${sat}%,${l1 + 8}%) 0%, hsl(${hue2},${sat - 10}%,${l1}%) 45%, hsl(${hue3},${sat - 20}%,${l2}%) 100%)`;
-  }
-
-  function observeCards(cards) {
-    if (!("IntersectionObserver" in window)) {
-      cards.forEach((c) => c.classList.add("is-visible"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("is-visible");
-            io.unobserve(e.target);
-          }
-        }),
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
-    );
-    cards.forEach((c) => io.observe(c));
-  }
-
   function renderGenreTags() {
     const tags = [ALL, ...allGenres];
     genreContainer.innerHTML = tags
@@ -54,30 +89,6 @@
           `<button class="genre-tag${g === currentGenre ? " active" : ""}" data-genre="${g}">${g}</button>`
       )
       .join("");
-  }
-
-  function cardHTML(m, indexOffset) {
-    const poster = m.poster_url
-      ? `<div class="movie-poster" style="background-image:url('${m.poster_url}');background-size:cover;background-position:center"></div>`
-      : `<div class="movie-poster" style="background:${getPosterGradient(m.id)}">
-           <i data-lucide="film" class="poster-icon"></i>
-         </div>`;
-    const rating = m.vote_average != null ? m.vote_average.toFixed(1) : "—";
-    const year = m.release_year != null ? m.release_year : "—";
-    return `
-      <a href="/movie/${m.id}" class="movie-card" data-id="${m.id}" style="animation-delay:${(indexOffset % 24) * 0.04}s">
-        ${poster}
-        <div class="movie-info">
-          <div class="movie-title">${m.title}</div>
-          <div class="movie-meta">
-            <span class="movie-year">${year}</span>
-            <span class="movie-rating">
-              <svg viewBox="0 0 24 24" fill="#F5C518" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>
-              ${rating}
-            </span>
-          </div>
-        </div>
-      </a>`;
   }
 
   function fetchMovies(reset) {
@@ -118,7 +129,7 @@
         }
 
         const startIndex = gridContainer.children.length;
-        const html = data.movies.map((m, i) => cardHTML(m, startIndex + i)).join("");
+        const html = data.movies.map((m, i) => renderMovieCard(m, startIndex + i)).join("");
         gridContainer.insertAdjacentHTML("beforeend", html);
 
         const newCards = Array.from(gridContainer.querySelectorAll(".movie-card")).slice(startIndex);
@@ -213,15 +224,6 @@
     let currentSearchAbort = null;
     const MIN_CHARS = 2;
     const DEBOUNCE_MS = 250;
-
-    function escapeHTML(s) {
-      return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
 
     function highlightMatch(title, query) {
       if (!query) return escapeHTML(title);
@@ -374,4 +376,142 @@
       console.error("Failed to fetch genres:", err);
       reload();
     });
+})();
+
+// ── Movie detail: "More Like This" grid ────────────────────────────────
+(function () {
+  const grid = document.getElementById("similar-grid");
+  if (!grid) return;
+
+  const movieId = grid.dataset.movieId;
+  fetch(`/api/recommend/${movieId}?n=12`)
+    .then((r) => (r.ok ? r.json() : { recommendations: [] }))
+    .then((data) => {
+      const recs = data.recommendations || [];
+      if (recs.length === 0) {
+        grid.innerHTML = `<p class="empty-note">No similar films available for this title.</p>`;
+        return;
+      }
+      grid.innerHTML = recs.map((m, i) => renderMovieCard(m, i)).join("");
+      observeCards(Array.from(grid.querySelectorAll(".movie-card")));
+      if (window.lucide) lucide.createIcons();
+    })
+    .catch((err) => {
+      console.error("Failed to load recommendations:", err);
+      grid.innerHTML = `<p class="empty-note">Could not load recommendations.</p>`;
+    });
+})();
+
+// ── Recommender page: search → pick movie → show recommendations ───────
+(function () {
+  const searchInput = document.getElementById("rec-search");
+  const suggestionsBox = document.getElementById("rec-suggestions");
+  const selectedBox = document.getElementById("rec-selected");
+  const resultsGrid = document.getElementById("rec-results");
+  if (!searchInput || !suggestionsBox || !resultsGrid) return;
+
+  const MIN_CHARS = 2;
+  const DEBOUNCE_MS = 200;
+  let debounceTimer = null;
+  let currentAbort = null;
+
+  function closeSuggestions() {
+    suggestionsBox.classList.remove("open");
+    suggestionsBox.innerHTML = "";
+  }
+
+  function renderSuggestions(movies, query) {
+    if (!movies.length) {
+      suggestionsBox.innerHTML = `<li class="rec-sug-empty">No films match <strong>${escapeHTML(query)}</strong>.</li>`;
+      suggestionsBox.classList.add("open");
+      return;
+    }
+    suggestionsBox.innerHTML = movies
+      .map((m) => {
+        const year = m.release_year != null ? m.release_year : "—";
+        const rating = m.vote_average != null ? m.vote_average.toFixed(1) : "—";
+        const poster = m.poster_url
+          ? `<div class="rec-sug-poster" style="background-image:url('${m.poster_url}');background-size:cover;background-position:center"></div>`
+          : `<div class="rec-sug-poster" style="background:${getPosterGradient(m.id)}"></div>`;
+        return `
+          <li class="rec-sug-row" data-id="${m.id}" data-title="${escapeHTML(m.title)}">
+            ${poster}
+            <div class="rec-sug-meta">
+              <div class="rec-sug-title">${escapeHTML(m.title)}</div>
+              <div class="rec-sug-sub">${year} · ★ ${rating}</div>
+            </div>
+          </li>`;
+      })
+      .join("");
+    suggestionsBox.classList.add("open");
+  }
+
+  async function searchMovies(query) {
+    if (currentAbort) currentAbort.abort();
+    currentAbort = new AbortController();
+    try {
+      const r = await fetch(
+        `/api/movies?q=${encodeURIComponent(query)}&per_page=8`,
+        { signal: currentAbort.signal }
+      );
+      const data = await r.json();
+      renderSuggestions(data.movies || [], query);
+    } catch (e) {
+      if (e.name !== "AbortError") console.error("Recommender search failed:", e);
+    }
+  }
+
+  function selectMovie(id, title) {
+    closeSuggestions();
+    searchInput.value = title;
+    selectedBox.innerHTML = `
+      <div class="rec-selected-card">
+        <span class="rec-selected-label">Recommendations based on</span>
+        <span class="rec-selected-title">${escapeHTML(title)}</span>
+      </div>`;
+    resultsGrid.innerHTML = `<p class="empty-note">Loading similar films…</p>`;
+
+    fetch(`/api/recommend/${id}?n=20`)
+      .then((r) => (r.ok ? r.json() : { recommendations: [] }))
+      .then((data) => {
+        const recs = data.recommendations || [];
+        if (recs.length === 0) {
+          resultsGrid.innerHTML = `<p class="empty-note">No recommendations available for this title.</p>`;
+          return;
+        }
+        resultsGrid.innerHTML = recs.map((m, i) => renderMovieCard(m, i)).join("");
+        observeCards(Array.from(resultsGrid.querySelectorAll(".movie-card")));
+        if (window.lucide) lucide.createIcons();
+      })
+      .catch((err) => {
+        console.error("Recommendation fetch failed:", err);
+        resultsGrid.innerHTML = `<p class="empty-note">Could not load recommendations.</p>`;
+      });
+  }
+
+  searchInput.addEventListener("input", (e) => {
+    const q = e.target.value.trim();
+    clearTimeout(debounceTimer);
+    if (q.length < MIN_CHARS) {
+      closeSuggestions();
+      return;
+    }
+    debounceTimer = setTimeout(() => searchMovies(q), DEBOUNCE_MS);
+  });
+
+  suggestionsBox.addEventListener("click", (e) => {
+    const row = e.target.closest(".rec-sug-row");
+    if (!row) return;
+    selectMovie(row.dataset.id, row.dataset.title);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      closeSuggestions();
+    }
+  });
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSuggestions();
+  });
 })();
