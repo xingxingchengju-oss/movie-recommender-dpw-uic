@@ -12,59 +12,71 @@
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-logo">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="4" width="20" height="16" rx="2"/>
-        <path d="M7 4v16M17 4v16M2 9h5M17 9h5M2 15h5M17 15h5"/>
-      </svg>
-      <span class="logo-text">Reelvana</span>
-    </div>
-    <ul class="sidebar-nav">
-      <li>
-        <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
-          <i data-lucide="film"></i>
-          <span>Movies</span>
-        </a>
-      </li>
-      <li>
-        <a href="{{ url_for('page_analysis') }}" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
-          <i data-lucide="bar-chart-3"></i>
-          <span>Analysis</span>
-        </a>
-      </li>
-      <li>
-        <a href="{{ url_for('page_recommender') }}" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
-          <i data-lucide="sparkles"></i>
-          <span>Recommend</span>
-        </a>
-      </li>
-    </ul>
-  </nav>
+  {% include "_sidebar.html" %}
 
   <main class="main-content">
     <div class="page-header">
       <h1 class="page-title">Recommend</h1>
-      <p class="page-subtitle">Pick a film you love — get similar suggestions</p>
+      <p class="page-subtitle">Discover films tailored to your taste</p>
     </div>
 
-    <div class="rec-search-wrap">
-      <input
-        type="text"
-        id="rec-search"
-        class="rec-search-input"
-        placeholder="Search for a movie (e.g. Inception, Toy Story, The Godfather)…"
-        autocomplete="off"
-      />
-      <ul id="rec-suggestions" class="rec-suggestions" role="listbox"></ul>
+    <div class="rec-tabs" role="tablist">
+      <button type="button" class="rec-tab active" data-tab="by-movie" role="tab" aria-selected="true">By Movie</button>
+      <button type="button" class="rec-tab" data-tab="for-user" role="tab" aria-selected="false">For User</button>
     </div>
 
-    <div id="rec-selected" class="rec-selected"></div>
-    <div id="rec-results" class="movie-grid"></div>
+    <!-- Tab: By Movie (V1, unchanged behavior) -->
+    <section id="tab-by-movie" class="rec-tab-panel active" role="tabpanel">
+      <div class="rec-search-wrap">
+        <input
+          type="text"
+          id="rec-search"
+          class="rec-search-input"
+          placeholder="Search for a movie (e.g. Inception, Toy Story, The Godfather)…"
+          autocomplete="off"
+        />
+        <ul id="rec-suggestions" class="rec-suggestions" role="listbox"></ul>
+      </div>
+
+      <div id="rec-selected" class="rec-selected"></div>
+      <div id="rec-results" class="movie-grid"></div>
+    </section>
+
+    <!-- Tab: For User (SVD collaborative filtering, driven by sidebar) -->
+    <section id="tab-for-user" class="rec-tab-panel" role="tabpanel" hidden>
+      <div class="rec-user-lookup">
+        <label class="rec-user-lookup-label" for="rec-user-lookup-input">
+          Try another MovieLens user ID
+        </label>
+        <div class="rec-user-lookup-row">
+          <input
+            type="number"
+            id="rec-user-lookup-input"
+            class="rec-user-lookup-input"
+            placeholder="e.g. 41, 95, 493"
+            min="1"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+          <button type="button" id="rec-user-lookup-btn" class="rec-user-lookup-btn">
+            Load recommendations
+          </button>
+        </div>
+        <p class="rec-user-lookup-help">
+          The sidebar shows curated demo profiles; this field tests any trained MovieLens user.
+        </p>
+        <p id="rec-user-lookup-err" class="rec-user-lookup-err" hidden></p>
+      </div>
+
+      <div id="rec-user-status" class="rec-user-status">
+        Pick a profile from the sidebar, or enter a MovieLens user ID.
+      </div>
+      <div id="rec-user-results" class="movie-grid"></div>
+    </section>
   </main>
 
   <script>lucide.createIcons();</script>
+  <script src="{{ url_for('static', filename='user_profile.js') }}"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

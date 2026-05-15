@@ -1,8 +1,11 @@
+import pandas as pd
 from flask import Flask, abort, jsonify, render_template, request
 
 import analysis
 import config
-import recommender
+from recommenders import item_based as recommender
+from recommenders import user_based as user_recommender
+from recommenders.curated import CURATED_USERS
 from data_loader import load_movies, movie_to_detail_dict, movie_to_list_dict
 
 app = Flask(__name__)
@@ -17,6 +20,14 @@ recommender.build(DF_MOVIES)
 _rec_status = recommender.get_status()
 print(f"[startup] Recommender ready: {_rec_status['n_movies']} movies × "
       f"{_rec_status['n_features']} features")
+
+print("[startup] Building user recommender (SVD)...")
+_ratings_df = pd.read_csv(config.RATINGS_CSV)
+_links_df = pd.read_csv(config.LINKS_CSV)
+user_recommender.build(_ratings_df, _links_df, DF_MOVIES)
+_user_rec_status = user_recommender.get_status()
+print(f"[startup] User recommender ready: {_user_rec_status['n_users']} users × "
+      f"{_user_rec_status['n_movies']} movies")
 
 
 @app.route("/")
@@ -87,6 +98,43 @@ def api_recommend(movie_id):
             "recommendations": [],
         }), 404
     return jsonify({"recommendations": recs})
+
+
+@app.route("/api/users")
+def api_users():
+    return jsonify({"users": CURATED_USERS})
+
+
+@app.route("/api/recommend/user/<int:user_id>")
+def api_recommend_user(user_id):
+    try:
+        n = max(1, min(int(request.args.get("n", 20)), 50))
+    except ValueError:
+        n = 20
+    recs = user_recommender.get_user_recommendations(user_id, n)
+    if not recs:
+        return jsonify({
+            "error": "no recommendations available",
+            "hint": "user not in trained SVD index",
+            "recommendations": [],
+        }), 404
+    return jsonify({"recommendations": recs})
+
+
+@app.route("/api/predict_rating/<int:user_id>/<int:movie_id>")
+def api_predict_rating(user_id, movie_id):
+    rating = user_recommender.predict_rating(user_id, movie_id)
+    if rating is None:
+        if not user_recommender.has_user(user_id):
+            hint = "user not in trained SVD index"
+        else:
+            hint = "movie not in trained SVD index (no MovieLens ratings)"
+        return jsonify({
+            "predicted_rating": None,
+            "error": "no prediction available",
+            "hint": hint,
+        }), 404
+    return jsonify({"predicted_rating": rating})
 
 
 @app.route("/api/movies")

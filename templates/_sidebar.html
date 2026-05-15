@@ -1,0 +1,44 @@
+{# Sidebar partial. Static markup only — curated profiles are injected by user_profile.js. #}
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <path d="M7 4v16M17 4v16M2 9h5M17 9h5M2 15h5M17 15h5"/>
+    </svg>
+    <span class="logo-text">Reelvana</span>
+  </div>
+
+  <ul class="sidebar-nav">
+    <li>
+      <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
+        <i data-lucide="film"></i>
+        <span>Movies</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('page_analysis') }}" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
+        <i data-lucide="bar-chart-3"></i>
+        <span>Analysis</span>
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('page_recommender') }}" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
+        <i data-lucide="sparkles"></i>
+        <span>Recommend</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Viewing as</div>
+    <ul class="profile-list" id="profile-list">
+      <li>
+        <button type="button" class="profile-row active" data-profile-id="guest">
+          <span class="profile-radio" aria-hidden="true"></span>
+          <span class="profile-label">Guest</span>
+        </button>
+      </li>
+      {# Curated rows injected here by user_profile.js once /api/users resolves. #}
+    </ul>
+  </div>
+</nav>

@@ -515,3 +515,258 @@ function renderMovieCard(m, indexOffset) {
     if (e.key === "Escape") closeSuggestions();
   });
 })();
+
+// ── Recommender page: tab switching ────────────────────────────────────
+(function () {
+  const tabs = document.querySelectorAll(".rec-tab");
+  const panels = document.querySelectorAll(".rec-tab-panel");
+  if (!tabs.length) return;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.tab;
+      tabs.forEach((t) => {
+        const active = t.dataset.tab === target;
+        t.classList.toggle("active", active);
+        t.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      panels.forEach((p) => {
+        const active = p.id === `tab-${target}`;
+        p.classList.toggle("active", active);
+        p.hidden = !active;
+      });
+    });
+  });
+})();
+
+// ── Recommender page: For User tab — driven by sidebar + manual user lookup ─
+(function () {
+  const statusBox = document.getElementById("rec-user-status");
+  const resultsGrid = document.getElementById("rec-user-results");
+  const lookupInput = document.getElementById("rec-user-lookup-input");
+  const lookupBtn = document.getElementById("rec-user-lookup-btn");
+  const lookupErr = document.getElementById("rec-user-lookup-err");
+  if (!statusBox || !resultsGrid || !lookupInput || !lookupBtn || !window.UserProfile) return;
+
+  const GUEST_STATUS = "Pick a profile from the sidebar, or enter a MovieLens user ID.";
+  let fetchSeq = 0;
+
+  function showLookupError(msg) {
+    lookupErr.textContent = msg;
+    lookupErr.hidden = false;
+  }
+
+  function clearLookupError() {
+    lookupErr.hidden = true;
+    lookupErr.textContent = "";
+  }
+
+  function renderGuestState() {
+    statusBox.textContent = GUEST_STATUS;
+    resultsGrid.innerHTML = "";
+  }
+
+  function paintRecs(recs) {
+    if (!recs.length) {
+      resultsGrid.innerHTML = `<p class="empty-note">No recommendations available.</p>`;
+      return;
+    }
+    resultsGrid.innerHTML = recs.map((m, i) => renderMovieCard(m, i)).join("");
+    observeCards(Array.from(resultsGrid.querySelectorAll(".movie-card")));
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function loadForCuratedUser(user) {
+    clearLookupError();
+    statusBox.innerHTML = `
+      Recommendations for <strong>${escapeHTML(user.label)}</strong>
+      <span class="rec-user-status-meta">user #${user.id} · ${user.n_ratings} ratings · top genre ${escapeHTML(user.top_genre)}</span>
+    `;
+    resultsGrid.innerHTML = `<p class="empty-note">Loading personalized picks…</p>`;
+    const seq = ++fetchSeq;
+    fetch(`/api/recommend/user/${user.id}?n=20`)
+      .then((r) => (r.ok ? r.json() : { recommendations: [] }))
+      .then((data) => {
+        if (seq !== fetchSeq) return;
+        paintRecs(data.recommendations || []);
+      })
+      .catch((err) => {
+        if (seq !== fetchSeq) return;
+        console.error("User recs fetch failed:", err);
+        resultsGrid.innerHTML = `<p class="empty-note">Could not load recommendations.</p>`;
+      });
+  }
+
+  function loadForArbitraryId(userId) {
+    statusBox.innerHTML = `
+      Recommendations for <strong>MovieLens user #${userId}</strong>
+      <span class="rec-user-status-meta">ad-hoc lookup · not saved to sidebar</span>
+    `;
+    resultsGrid.innerHTML = `<p class="empty-note">Loading personalized picks…</p>`;
+    const seq = ++fetchSeq;
+    fetch(`/api/recommend/user/${userId}?n=20`)
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (seq !== fetchSeq) return;
+        if (!ok) {
+          const hint = data.hint || "User ID not found.";
+          showLookupError(hint);
+          statusBox.textContent = GUEST_STATUS;
+          resultsGrid.innerHTML = "";
+          return;
+        }
+        clearLookupError();
+        paintRecs(data.recommendations || []);
+      })
+      .catch((err) => {
+        if (seq !== fetchSeq) return;
+        console.error("Ad-hoc user recs fetch failed:", err);
+        showLookupError("Could not load recommendations.");
+      });
+  }
+
+  function submitLookup() {
+    const raw = lookupInput.value.trim();
+    if (!raw) {
+      showLookupError("Please enter a user ID.");
+      return;
+    }
+    if (!/^\d+$/.test(raw)) {
+      showLookupError("Enter a numeric MovieLens user ID.");
+      return;
+    }
+    clearLookupError();
+    loadForArbitraryId(Number(raw));
+  }
+
+  lookupBtn.addEventListener("click", submitLookup);
+  lookupInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitLookup();
+    }
+  });
+  lookupInput.addEventListener("input", clearLookupError);
+
+  // Sidebar profile changes always win — even if the user was viewing an
+  // ad-hoc lookup, picking a sidebar profile snaps the tab back to that
+  // profile's recommendations.
+  window.addEventListener(window.UserProfile.EVENT, (e) => {
+    const userId = e.detail.userId;
+    clearLookupError();
+    lookupInput.value = "";
+    if (userId == null) {
+      renderGuestState();
+      return;
+    }
+    const user = window.UserProfile.getUser(userId);
+    if (user) loadForCuratedUser(user);
+  });
+
+  // Initial paint (before UserProfile resolves). The bootstrap event will
+  // promptly replace this once /api/users responds.
+  renderGuestState();
+})();
+
+// ── Movies homepage: "Recommended for you" strip ───────────────────────
+(function () {
+  const wrap = document.getElementById("strip-wrap");
+  const strip = document.getElementById("movie-strip");
+  const subtitle = document.getElementById("strip-subtitle");
+  if (!wrap || !strip || !window.UserProfile) return;
+
+  let currentFetchId = 0;
+
+  function hide() {
+    wrap.hidden = true;
+    strip.innerHTML = "";
+  }
+
+  function show(user) {
+    wrap.hidden = false;
+    if (subtitle) {
+      subtitle.textContent = `${user.label} · ${user.top_genre}`;
+    }
+    strip.innerHTML = `<p class="strip-empty">Loading picks for ${escapeHTML(user.label)}…</p>`;
+    const fetchId = ++currentFetchId;
+    fetch(`/api/recommend/user/${user.id}?n=10`)
+      .then((r) => (r.ok ? r.json() : { recommendations: [] }))
+      .then((data) => {
+        if (fetchId !== currentFetchId) return; // stale; a newer switch happened
+        const recs = data.recommendations || [];
+        if (recs.length === 0) {
+          strip.innerHTML = `<p class="strip-empty">No picks available for this profile.</p>`;
+          return;
+        }
+        strip.innerHTML = recs.map((m, i) => renderMovieCard(m, i)).join("");
+        observeCards(Array.from(strip.querySelectorAll(".movie-card")));
+        if (window.lucide) lucide.createIcons();
+      })
+      .catch((err) => {
+        if (fetchId !== currentFetchId) return;
+        console.error("Strip fetch failed:", err);
+        strip.innerHTML = `<p class="strip-empty">Could not load recommendations.</p>`;
+      });
+  }
+
+  window.addEventListener(window.UserProfile.EVENT, (e) => {
+    const { userId, user } = e.detail;
+    if (userId == null || !user) {
+      hide();
+      return;
+    }
+    show(user);
+  });
+})();
+
+// ── Movie detail page: personalized predicted rating ───────────────────
+(function () {
+  const wrap = document.getElementById("stat-predicted");
+  const valueEl = document.getElementById("stat-predicted-value");
+  if (!wrap || !valueEl || !window.UserProfile) return;
+
+  const movieId = Number(wrap.dataset.movieId);
+  if (!Number.isFinite(movieId)) return;
+
+  let fetchSeq = 0;
+
+  function hide() {
+    wrap.hidden = true;
+  }
+
+  function load(userId) {
+    if (userId == null) {
+      hide();
+      return;
+    }
+    const seq = ++fetchSeq;
+    fetch(`/api/predict_rating/${userId}/${movieId}`)
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (seq !== fetchSeq) return; // stale response, newer profile switch in flight
+        if (!ok || data.predicted_rating == null) {
+          hide();
+          return;
+        }
+        valueEl.textContent = Number(data.predicted_rating).toFixed(1);
+        wrap.hidden = false;
+      })
+      .catch((err) => {
+        if (seq !== fetchSeq) return;
+        console.error("Predicted rating fetch failed:", err);
+        hide();
+      });
+  }
+
+  // Listen for future profile switches.
+  window.addEventListener(window.UserProfile.EVENT, (e) => load(e.detail.userId));
+
+  // Belt-and-braces: even if the bootstrap event fired before this listener
+  // attached, ready.then() guarantees we paint the initial state once
+  // /api/users has resolved.
+  if (window.UserProfile.ready && typeof window.UserProfile.ready.then === "function") {
+    window.UserProfile.ready.then(() => load(window.UserProfile.getId()));
+  } else {
+    load(window.UserProfile.getId());
+  }
+})();

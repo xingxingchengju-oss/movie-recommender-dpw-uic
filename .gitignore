@@ -1,6 +1,16 @@
 # Large raw data files (too big for GitHub)
 data/raw/
 
+# Teammate's experimental ML drop (~1.2 GB: SBERT pkls, full MovieLens ratings,
+# review corpus, evaluation harnesses). Local-only reference material — V2A's
+# user_recommender.py is the production version. Do not upload to GitHub.
+unprocessed/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
 # Movie poster images (large binary cache, regenerated from data sources)
 static/posters/
 # TMDB downloader failure logs (regenerated on every run)

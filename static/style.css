@@ -164,6 +164,111 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
   flex-shrink: 0;
 }
 
+/* ── Sidebar: Viewing As profile selector (V2B1) ─────────────────────── */
+.sidebar-section {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0 12px;
+  margin-bottom: 10px;
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+              color var(--duration-fast) var(--ease-out-expo);
+}
+
+.profile-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.profile-row.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.profile-radio {
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+  position: relative;
+  transition: border-color var(--duration-fast) var(--ease-out-expo);
+}
+
+.profile-row.active .profile-radio {
+  border-color: var(--accent);
+}
+
+.profile-row.active .profile-radio::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-label {
+  font-size: 0.85rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-row.active .profile-sub {
+  color: var(--accent);
+  opacity: 0.7;
+}
+
 /* ===== Main Content ===== */
 .main-content {
   margin-left: var(--sidebar-width);
@@ -388,6 +493,65 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 28px;
+}
+
+/* ── Personalized horizontal strip (V2B1, homepage only) ─────────────── */
+.strip-wrap {
+  margin: 0 0 36px 0;
+}
+
+.strip-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.strip-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.strip-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.movie-strip {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 4px 4px 14px 4px;
+  margin: 0 -4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hover) transparent;
+}
+
+.movie-strip::-webkit-scrollbar {
+  height: 8px;
+}
+
+.movie-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.movie-strip::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 4px;
+}
+
+.movie-strip .movie-card {
+  flex: 0 0 170px;
+  width: 170px;
+}
+
+.strip-empty {
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* ===== Movie Card ===== */
@@ -632,6 +796,17 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
 
 .stat-value.rating-value {
   color: #F5C518;
+}
+
+/* Personalized predicted rating (V2B2) — tinted with the accent so it reads
+   as "yours", consistent with the sidebar Viewing As active state. */
+.stat-predicted .stat-label {
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.stat-value.rating-predicted {
+  color: var(--accent);
 }
 
 .detail-overview {
@@ -1600,4 +1775,152 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+/* ── Recommender page: V2A tabs + For User profile picker ────────────── */
+.rec-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rec-tab {
+  padding: 12px 22px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--duration-fast) var(--ease-out-expo),
+              border-color var(--duration-fast) var(--ease-out-expo);
+}
+
+.rec-tab:hover {
+  color: var(--text-primary);
+}
+
+.rec-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.rec-tab-panel {
+  display: none;
+}
+
+.rec-tab-panel.active {
+  display: block;
+}
+
+/* Compact ad-hoc MovieLens user ID lookup (V2B2 cleanup). The curated
+   profile picker has moved to the global sidebar; this is an advanced
+   secondary tool for testing any trained user. */
+.rec-user-lookup {
+  margin: 0 0 24px 0;
+  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  max-width: 560px;
+}
+
+.rec-user-lookup-label {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.rec-user-lookup-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.rec-user-lookup-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  height: 40px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+
+.rec-user-lookup-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.rec-user-lookup-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Hide the browser-native spinner controls on the number input. */
+.rec-user-lookup-input::-webkit-outer-spin-button,
+.rec-user-lookup-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.rec-user-lookup-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.rec-user-lookup-btn {
+  height: 40px;
+  padding: 0 18px;
+  background: var(--accent);
+  color: var(--bg-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: filter var(--duration-fast) var(--ease-out-expo),
+              transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.rec-user-lookup-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.rec-user-lookup-help {
+  margin: 10px 0 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.rec-user-lookup-err {
+  margin: 10px 0 0 0;
+  font-size: 0.85rem;
+  color: #f87171;
+}
+
+.rec-user-status {
+  margin: 0 0 24px 0;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.rec-user-status strong {
+  color: var(--text-primary);
+}
+
+.rec-user-status-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }

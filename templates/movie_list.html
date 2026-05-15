@@ -12,36 +12,7 @@
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-logo">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="4" width="20" height="16" rx="2"/>
-        <path d="M7 4v16M17 4v16M2 9h5M17 9h5M2 15h5M17 15h5"/>
-      </svg>
-      <span class="logo-text">Reelvana</span>
-    </div>
-    <ul class="sidebar-nav">
-      <li>
-        <a href="{{ url_for('page_movie_list') }}" class="nav-link {% if active_page == 'movies' %}active{% endif %}" data-page="movies">
-          <i data-lucide="film"></i>
-          <span>Movies</span>
-        </a>
-      </li>
-      <li>
-        <a href="/analysis" class="nav-link {% if active_page == 'analysis' %}active{% endif %}" data-page="analysis">
-          <i data-lucide="bar-chart-3"></i>
-          <span>Analysis</span>
-        </a>
-      </li>
-      <li>
-        <a href="/recommender" class="nav-link {% if active_page == 'recommender' %}active{% endif %}" data-page="recommender">
-          <i data-lucide="sparkles"></i>
-          <span>Recommend</span>
-        </a>
-      </li>
-    </ul>
-  </nav>
+  {% include "_sidebar.html" %}
 
   <!-- Main Content -->
   <main class="main-content">
@@ -71,6 +42,17 @@
       </div>
     </div>
 
+    <!-- Personalized strip (V2B1) — populated by user_profile.js event listener -->
+    <section id="strip-wrap" class="strip-wrap" hidden>
+      <div class="strip-title-row">
+        <h2 class="strip-title">Recommended for you</h2>
+        <span class="strip-subtitle" id="strip-subtitle"></span>
+      </div>
+      <div class="movie-strip" id="movie-strip">
+        <!-- Strip cards injected by script.js -->
+      </div>
+    </section>
+
     <!-- Toolbar: Sort + Genre Filters -->
     <div class="toolbar">
       <div class="sort-row">
@@ -99,6 +81,7 @@
     </div>
   </main>
 
+  <script src="{{ url_for('static', filename='user_profile.js') }}"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
   <script>lucide.createIcons();</script>
 </body>
