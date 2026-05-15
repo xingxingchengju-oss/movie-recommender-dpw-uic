@@ -139,18 +139,6 @@ See `PROJECT_STATUS.md` for the full data-cleaning audit (what was dropped and w
 
 ---
 
-## 👥 Team
-
-| Name | Student ID |
-|---|---|
-| CHEN Fengyuan | 2430026009 |
-| CHEN Yixuan | 2430036019 |
-| CHEN Zheyu | 2430026021 |
-| YU Chengzhu | 2330026199 |
-| ZHI Xiwen | 2330026231 |
-
----
-
 ## 📄 Documentation
 
 - [Project Status](PROJECT_STATUS.md) — data-cleaning audit, file map, completion log
