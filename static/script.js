@@ -36,7 +36,7 @@ function observeCards(cards) {
   cards.forEach((c) => io.observe(c));
 }
 
-function renderMovieCard(m, indexOffset) {
+function renderMovieCard(m, indexOffset, explanation) {
   const poster = m.poster_url
     ? `<div class="movie-poster" style="background-image:url('${m.poster_url}');background-size:cover;background-position:center"></div>`
     : `<div class="movie-poster" style="background:${getPosterGradient(m.id)}">
@@ -45,6 +45,10 @@ function renderMovieCard(m, indexOffset) {
   const rating = m.vote_average != null ? m.vote_average.toFixed(1) : "—";
   const year = m.release_year != null ? m.release_year : "—";
   const delay = ((indexOffset || 0) % 24) * 0.04;
+  // Optional "Because you saved X (sim Y.YY)" annotation — V2C hybrid recs.
+  const explainBlock = explanation && explanation.source_title
+    ? `<div class="fav-explain">Because you saved <span class="fav-explain-source">${escapeHTML(explanation.source_title)}</span> · sim ${explanation.sim.toFixed(2)}</div>`
+    : "";
   return `
     <a href="/movie/${m.id}" class="movie-card" data-id="${m.id}" style="animation-delay:${delay}s">
       ${poster}
@@ -58,6 +62,7 @@ function renderMovieCard(m, indexOffset) {
           </span>
         </div>
       </div>
+      ${explainBlock}
     </a>`;
 }
 
@@ -516,27 +521,36 @@ function renderMovieCard(m, indexOffset) {
   });
 })();
 
-// ── Recommender page: tab switching ────────────────────────────────────
+// ── Recommender page: tab switching (with URL hash support) ────────────
 (function () {
   const tabs = document.querySelectorAll(".rec-tab");
   const panels = document.querySelectorAll(".rec-tab-panel");
   if (!tabs.length) return;
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const target = tab.dataset.tab;
-      tabs.forEach((t) => {
-        const active = t.dataset.tab === target;
-        t.classList.toggle("active", active);
-        t.setAttribute("aria-selected", active ? "true" : "false");
-      });
-      panels.forEach((p) => {
-        const active = p.id === `tab-${target}`;
-        p.classList.toggle("active", active);
-        p.hidden = !active;
-      });
+  function activate(target) {
+    let matched = false;
+    tabs.forEach((t) => {
+      const active = t.dataset.tab === target;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true" : "false");
+      if (active) matched = true;
     });
+    if (!matched) return false;
+    panels.forEach((p) => {
+      const active = p.id === `tab-${target}`;
+      p.classList.toggle("active", active);
+      p.hidden = !active;
+    });
+    return true;
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => activate(tab.dataset.tab));
   });
+
+  // Activate from URL hash like "#tab=from-favorites" on page load.
+  const hashMatch = window.location.hash.match(/^#tab=([\w-]+)/);
+  if (hashMatch) activate(hashMatch[1]);
 })();
 
 // ── Recommender page: For User tab — driven by sidebar + manual user lookup ─
@@ -669,54 +683,119 @@ function renderMovieCard(m, indexOffset) {
 })();
 
 // ── Movies homepage: "Recommended for you" strip ───────────────────────
+// Three modes, always visible:
+//   - Curated profile  → SVD picks for that user (/api/recommend/user/<id>)
+//   - Guest + favorites → Hybrid picks at α=0.5 (/api/recommend/build)
+//   - Guest + no favorites → friendly CTA empty state
 (function () {
   const wrap = document.getElementById("strip-wrap");
   const strip = document.getElementById("movie-strip");
   const subtitle = document.getElementById("strip-subtitle");
-  if (!wrap || !strip || !window.UserProfile) return;
+  if (!wrap || !strip || !window.UserProfile || !window.Favorites) return;
 
-  let currentFetchId = 0;
+  let fetchSeq = 0;
 
-  function hide() {
-    wrap.hidden = true;
-    strip.innerHTML = "";
+  function renderEmptyCta() {
+    wrap.hidden = false;
+    if (subtitle) subtitle.textContent = "";
+    strip.innerHTML = `
+      <div class="strip-empty-cta">
+        <span class="strip-empty-cta-icon" aria-hidden="true">♡</span>
+        <p class="strip-empty-cta-text">
+          Save a film from its detail page and we'll line up picks here based on your taste.
+        </p>
+      </div>`;
   }
 
-  function show(user) {
+  function renderCards(recs, label, explanations) {
     wrap.hidden = false;
-    if (subtitle) {
-      subtitle.textContent = `${user.label} · ${user.top_genre}`;
+    if (subtitle) subtitle.textContent = label || "";
+    if (!recs.length) {
+      strip.innerHTML = `<p class="strip-empty">No picks available right now.</p>`;
+      return;
     }
+    strip.innerHTML = recs
+      .map((m, i) => {
+        const ex = explanations && (explanations[m.id] || explanations[String(m.id)]);
+        return renderMovieCard(m, i, ex);
+      })
+      .join("");
+    observeCards(Array.from(strip.querySelectorAll(".movie-card")));
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function loadCurated(user) {
+    wrap.hidden = false;
+    const label = `${user.label} · ${user.top_genre}`;
+    if (subtitle) subtitle.textContent = label;
     strip.innerHTML = `<p class="strip-empty">Loading picks for ${escapeHTML(user.label)}…</p>`;
-    const fetchId = ++currentFetchId;
+    const seq = ++fetchSeq;
     fetch(`/api/recommend/user/${user.id}?n=10`)
       .then((r) => (r.ok ? r.json() : { recommendations: [] }))
       .then((data) => {
-        if (fetchId !== currentFetchId) return; // stale; a newer switch happened
-        const recs = data.recommendations || [];
-        if (recs.length === 0) {
-          strip.innerHTML = `<p class="strip-empty">No picks available for this profile.</p>`;
-          return;
-        }
-        strip.innerHTML = recs.map((m, i) => renderMovieCard(m, i)).join("");
-        observeCards(Array.from(strip.querySelectorAll(".movie-card")));
-        if (window.lucide) lucide.createIcons();
+        if (seq !== fetchSeq) return;
+        renderCards(data.recommendations || [], label);
       })
       .catch((err) => {
-        if (fetchId !== currentFetchId) return;
-        console.error("Strip fetch failed:", err);
+        if (seq !== fetchSeq) return;
+        console.error("Strip curated fetch failed:", err);
         strip.innerHTML = `<p class="strip-empty">Could not load recommendations.</p>`;
       });
   }
 
-  window.addEventListener(window.UserProfile.EVENT, (e) => {
-    const { userId, user } = e.detail;
-    if (userId == null || !user) {
-      hide();
+  function loadFavorites(items) {
+    wrap.hidden = false;
+    const n = items.length;
+    const label = `Based on your ${n} favorite${n === 1 ? "" : "s"}`;
+    if (subtitle) subtitle.textContent = label;
+    strip.innerHTML = `<p class="strip-empty">Blending content and collaborative signals…</p>`;
+    const seq = ++fetchSeq;
+    fetch("/api/recommend/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movie_ids: items.map((it) => it.id), alpha: 0.5, n: 10 }),
+    })
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (seq !== fetchSeq) return;
+        if (!ok) {
+          strip.innerHTML = `<p class="strip-empty">${escapeHTML(data.hint || data.error || "Could not load recommendations.")}</p>`;
+          return;
+        }
+        renderCards(data.recommendations || [], label, data.explanations || {});
+      })
+      .catch((err) => {
+        if (seq !== fetchSeq) return;
+        console.error("Strip favorites fetch failed:", err);
+        strip.innerHTML = `<p class="strip-empty">Could not load recommendations.</p>`;
+      });
+  }
+
+  function refresh() {
+    const userId = window.UserProfile.getId();
+    if (userId != null) {
+      const user = window.UserProfile.getUser(userId);
+      if (user) loadCurated(user);
       return;
     }
-    show(user);
-  });
+    // Guest mode.
+    const items = window.Favorites.getItems();
+    if (items.length === 0) {
+      renderEmptyCta();
+      return;
+    }
+    loadFavorites(items);
+  }
+
+  window.addEventListener(window.UserProfile.EVENT, refresh);
+  window.addEventListener(window.Favorites.EVENT, refresh);
+
+  // Initial paint after /api/users resolves so getUser() can find the cache.
+  if (window.UserProfile.ready && typeof window.UserProfile.ready.then === "function") {
+    window.UserProfile.ready.then(refresh);
+  } else {
+    refresh();
+  }
 })();
 
 // ── Movie detail page: personalized predicted rating ───────────────────
@@ -770,3 +849,234 @@ function renderMovieCard(m, indexOffset) {
     load(window.UserProfile.getId());
   }
 })();
+
+// ── Movie detail: Save to favorites button (V2C) ───────────────────────
+(function () {
+  const action = document.querySelector(".fav-action");
+  const btn = document.getElementById("fav-btn");
+  const hint = document.getElementById("fav-hint");
+  if (!action || !btn || !window.Favorites) return;
+
+  const movieId = Number(action.dataset.movieId);
+  const movieTitle = String(action.dataset.movieTitle || "");
+  if (!Number.isFinite(movieId)) return;
+
+  const iconEl = btn.querySelector(".fav-btn-icon");
+  const labelEl = btn.querySelector(".fav-btn-label");
+
+  function showHint(msg, durationMs) {
+    if (!hint) return;
+    hint.textContent = msg;
+    hint.hidden = false;
+    if (durationMs) {
+      setTimeout(() => {
+        if (hint.textContent === msg) hint.hidden = true;
+      }, durationMs);
+    }
+  }
+
+  function paint() {
+    const saved = window.Favorites.has(movieId);
+    btn.classList.toggle("is-saved", saved);
+    if (iconEl) iconEl.textContent = saved ? "♥" : "♡";
+    if (labelEl) labelEl.textContent = saved ? "Saved" : "Save to favorites";
+    btn.setAttribute("aria-pressed", saved ? "true" : "false");
+  }
+
+  btn.addEventListener("click", () => {
+    if (window.Favorites.has(movieId)) {
+      window.Favorites.remove(movieId);
+      paint();
+      return;
+    }
+    // If a curated profile is active, auto-switch to Guest so the favorite
+    // is meaningful (favorites are Guest-only by product design).
+    if (window.UserProfile && window.UserProfile.getId() != null) {
+      window.UserProfile.setId(null);
+      showHint("Switched to Guest — your favorites apply here.", 4000);
+    }
+    window.Favorites.add({ id: movieId, title: movieTitle });
+    paint();
+  });
+
+  window.addEventListener(window.Favorites.EVENT, paint);
+  paint();
+})();
+
+// ── Recommender page: From Favorites tab — hybrid recommender (V2C) ────
+(function () {
+  const stateCurated = document.getElementById("fav-empty-curated");
+  const stateZero = document.getElementById("fav-empty-zero");
+  const stateBody = document.getElementById("fav-body");
+  const chipsBox = document.getElementById("fav-chips");
+  const alphaInput = document.getElementById("fav-alpha");
+  const alphaReadout = document.getElementById("fav-alpha-readout");
+  const submitBtn = document.getElementById("fav-submit");
+  const noteEl = document.getElementById("fav-note");
+  const resultsGrid = document.getElementById("fav-results");
+  const switchGuestBtn = document.getElementById("fav-switch-guest");
+  if (!stateCurated || !stateZero || !stateBody || !chipsBox || !alphaInput || !submitBtn || !resultsGrid) return;
+  if (!window.Favorites || !window.UserProfile) return;
+
+  let submitSeq = 0;
+  // Signature of the favorites set last successfully fetched. Used to skip
+  // duplicate auto-submits when the user just tab-hops without changing
+  // their list. NOTE: alpha is intentionally NOT part of the signature —
+  // dragging the slider shouldn't fire a request, the user clicks Find.
+  let lastFetchedSig = "";
+
+  function currentSig() {
+    return window.Favorites.getIds().slice().sort((a, b) => a - b).join(",");
+  }
+
+  function setNote(msg, kind) {
+    if (!msg) {
+      noteEl.hidden = true;
+      noteEl.textContent = "";
+      noteEl.classList.remove("is-err");
+      return;
+    }
+    noteEl.textContent = msg;
+    noteEl.classList.toggle("is-err", kind === "err");
+    noteEl.hidden = false;
+  }
+
+  function showState(which) {
+    stateCurated.hidden = which !== "curated";
+    stateZero.hidden = which !== "zero";
+    stateBody.hidden = which !== "body";
+  }
+
+  function renderChips() {
+    const items = window.Favorites.getItems();
+    if (!items.length) {
+      chipsBox.innerHTML = "";
+      return;
+    }
+    chipsBox.innerHTML = items
+      .map((it) => {
+        const title = it.title || `#${it.id}`;
+        return `
+          <span class="fav-chip" data-id="${it.id}">
+            <span class="fav-chip-title">${escapeHTML(title)}</span>
+            <button type="button" class="fav-chip-remove" aria-label="Remove ${escapeHTML(title)}">×</button>
+          </span>`;
+      })
+      .join("");
+  }
+
+  function decideState() {
+    const userId = window.UserProfile.getId();
+    if (userId != null) {
+      showState("curated");
+      return;
+    }
+    if (window.Favorites.count() === 0) {
+      showState("zero");
+      // If the user just cleared their favorites, also clear stale results.
+      resultsGrid.innerHTML = "";
+      lastFetchedSig = "";
+      return;
+    }
+    renderChips();
+    showState("body");
+    // Auto-fetch when the favorites set has changed since the last
+    // successful fetch (first visit, add/remove chip, etc.). Tab-hops with
+    // no change reuse the cached grid silently.
+    if (currentSig() !== lastFetchedSig) submit();
+  }
+
+  function updateAlphaReadout() {
+    const a = Number(alphaInput.value) / 100;
+    alphaReadout.textContent = a.toFixed(2);
+  }
+
+  function submit() {
+    const items = window.Favorites.getItems();
+    if (!items.length) return;
+    const alpha = Number(alphaInput.value) / 100;
+    const body = { movie_ids: items.map((it) => it.id), alpha, n: 20 };
+    const sig = currentSig();
+
+    setNote("");
+    resultsGrid.innerHTML = `<p class="empty-note">Blending content and collaborative signals…</p>`;
+    const seq = ++submitSeq;
+
+    fetch("/api/recommend/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+      .then((r) => r.json().then((data) => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => {
+        if (seq !== submitSeq) return;
+        if (!ok) {
+          setNote(data.hint || data.error || "Could not build recommendations.", "err");
+          resultsGrid.innerHTML = "";
+          return;
+        }
+        const recs = data.recommendations || [];
+        const ignored = data.ignored_ids || [];
+        const used = data.used_ids || [];
+        const explanations = data.explanations || {};
+
+        if (!recs.length && data.hint) {
+          setNote(data.hint);
+        } else if (ignored.length) {
+          const total = used.length + ignored.length;
+          setNote(`Used ${used.length}/${total} of your favorites — the others have no recommendation signal.`);
+        }
+
+        if (!recs.length) {
+          resultsGrid.innerHTML = `<p class="empty-note">No recommendations available.</p>`;
+          return;
+        }
+        resultsGrid.innerHTML = recs
+          .map((m, i) => renderMovieCard(m, i, explanations[m.id] || explanations[String(m.id)]))
+          .join("");
+        observeCards(Array.from(resultsGrid.querySelectorAll(".movie-card")));
+        if (window.lucide) lucide.createIcons();
+        lastFetchedSig = sig;
+      })
+      .catch((err) => {
+        if (seq !== submitSeq) return;
+        console.error("Hybrid fetch failed:", err);
+        setNote("Could not load recommendations.", "err");
+        resultsGrid.innerHTML = "";
+      });
+  }
+
+  // Chip remove
+  chipsBox.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".fav-chip-remove");
+    if (!removeBtn) return;
+    const chip = removeBtn.closest(".fav-chip");
+    if (!chip) return;
+    window.Favorites.remove(chip.dataset.id);
+    // Note: reelvana:favorites-changed will trigger decideState() below.
+  });
+
+  // α slider
+  alphaInput.addEventListener("input", updateAlphaReadout);
+  submitBtn.addEventListener("click", submit);
+
+  // State A CTA — switch back to Guest
+  if (switchGuestBtn) {
+    switchGuestBtn.addEventListener("click", () => {
+      window.UserProfile.setId(null);
+    });
+  }
+
+  // React to global events
+  window.addEventListener(window.UserProfile.EVENT, decideState);
+  window.addEventListener(window.Favorites.EVENT, decideState);
+
+  // Initial paint
+  updateAlphaReadout();
+  decideState();
+})();
+
+// (The V2B3 Build Your Own IIFE — search + autocomplete + chips + α-less
+//  submit + genre filter — was removed in V2C. The replacement above reads
+//  saved films directly from localStorage and routes through the hybrid
+//  recommender at /api/recommend/build.)

@@ -71,6 +71,13 @@ def load_movies():
     df = df[rating_ok & year_ok & title_ok].copy()
     print(f"[data_loader] Sanity filter dropped {before - len(df)} additional column-shifted rows.")
 
+    # Normalized title for forgiving search: strip non-alphanumerics + lowercase,
+    # so "ironman" matches "Iron Man", "lord of the rings" matches
+    # "LordoftheRings", etc. Computed once at load time.
+    df["title_norm"] = (
+        df["title"].astype(str).str.lower().str.replace(r"[^a-z0-9]", "", regex=True)
+    )
+
     df["genres_list"] = df["genres_parsed"].apply(
         lambda v: [g for g in _split_pipe(v) if g in CANONICAL_GENRES]
     )

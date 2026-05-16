@@ -1,4 +1,6 @@
 """TF-IDF + cosine similarity recommender. Built once at app startup."""
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -74,3 +76,53 @@ def get_recommendations(movie_id: int, n: int = 10) -> list[dict]:
     top = np.argpartition(-sims, n)[:n]
     top = top[np.argsort(-sims[top])]
     return [movie_to_list_dict(_state["df"].iloc[i]) for i in top]
+
+
+# ── V2C support: expose primitives so recommenders.hybrid can aggregate ────
+
+def has_movie(movie_id: int) -> bool:
+    """Public membership check — does this TMDB id appear in the V1 index?"""
+    return _state["id_to_idx"] is not None and int(movie_id) in _state["id_to_idx"]
+
+
+def score_vector_for_seed(seed_id: int) -> Optional[np.ndarray]:
+    """Full cosine-similarity row of one seed movie against the V1 TF-IDF matrix.
+
+    Returns a 1-D float32 array of shape (n_v1_movies,) — the similarity of
+    the seed against every English-language movie in the V1 index. The seed's
+    own slot is set to 0.0 (not -1) so callers can safely aggregate multiple
+    seeds before deciding what to mask out.
+
+    Returns None when the seed isn't in the V1 index (e.g. non-English film).
+    Used by recommenders.hybrid to build content-side scores across a list of
+    liked movies.
+    """
+    if _state["matrix"] is None:
+        raise RuntimeError("Recommender not built. Call build(df) at app startup.")
+    idx = _state["id_to_idx"].get(int(seed_id))
+    if idx is None:
+        return None
+    sims = linear_kernel(_state["matrix"][idx], _state["matrix"]).ravel().astype(np.float32)
+    sims[idx] = 0.0
+    return sims
+
+
+def get_v1_tmdb_ids() -> np.ndarray:
+    """Ordered TMDB id array aligned with the V1 TF-IDF matrix columns.
+
+    Allows callers (hybrid) to map V1 row index -> TMDB id without re-indexing
+    the DataFrame each call.
+    """
+    if _state["df"] is None:
+        raise RuntimeError("Recommender not built. Call build(df) at app startup.")
+    return _state["df"]["id"].to_numpy(dtype=np.int64)
+
+
+def get_v1_title(tmdb_id: int) -> Optional[str]:
+    """Lookup a movie's title from the V1 index (used by hybrid explanations)."""
+    if _state["df"] is None:
+        return None
+    idx = _state["id_to_idx"].get(int(tmdb_id))
+    if idx is None:
+        return None
+    return str(_state["df"].iloc[idx]["title"])

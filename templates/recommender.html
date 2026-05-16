@@ -23,6 +23,7 @@
     <div class="rec-tabs" role="tablist">
       <button type="button" class="rec-tab active" data-tab="by-movie" role="tab" aria-selected="true">By Movie</button>
       <button type="button" class="rec-tab" data-tab="for-user" role="tab" aria-selected="false">For User</button>
+      <button type="button" class="rec-tab" data-tab="from-favorites" role="tab" aria-selected="false">From Favorites</button>
     </div>
 
     <!-- Tab: By Movie (V1, unchanged behavior) -->
@@ -73,10 +74,49 @@
       </div>
       <div id="rec-user-results" class="movie-grid"></div>
     </section>
+
+    <!-- Tab: From Favorites (V2C — hybrid recommender from saved films) -->
+    <section id="tab-from-favorites" class="rec-tab-panel" role="tabpanel" hidden>
+      <!-- State A: a curated profile is active — favorites are Guest-only -->
+      <div id="fav-empty-curated" class="fav-empty" hidden>
+        <p>Favorites are only available as <strong>Guest</strong>.</p>
+        <button type="button" id="fav-switch-guest" class="fav-cta">Switch to Guest</button>
+      </div>
+
+      <!-- State B: Guest, but zero favorites yet -->
+      <div id="fav-empty-zero" class="fav-empty" hidden>
+        <p>Tap <strong>♡ Save to favorites</strong> on any movie's detail page to start building your list.</p>
+      </div>
+
+      <!-- State C: Guest + at least one favorite -->
+      <div id="fav-body" hidden>
+        <div class="fav-chips-wrap">
+          <div class="fav-chips-label">Your favorites</div>
+          <div id="fav-chips" class="fav-chips"></div>
+        </div>
+
+        <div class="fav-style">
+          <label class="fav-style-label" for="fav-alpha">Recommendation style</label>
+          <div class="fav-slider-row">
+            <span class="fav-slider-edge">Content</span>
+            <input type="range" id="fav-alpha" class="fav-slider"
+                   min="0" max="100" step="1" value="50">
+            <span class="fav-slider-edge">Collaborative</span>
+          </div>
+          <div class="fav-slider-readout">α = <span id="fav-alpha-readout">0.50</span></div>
+        </div>
+
+        <button type="button" id="fav-submit" class="fav-submit">Find recommendations</button>
+
+        <p id="fav-note" class="fav-note" hidden></p>
+        <div id="fav-results" class="movie-grid"></div>
+      </div>
+    </section>
   </main>
 
   <script>lucide.createIcons();</script>
   <script src="{{ url_for('static', filename='user_profile.js') }}"></script>
+  <script src="{{ url_for('static', filename='favorites.js') }}"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

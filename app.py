@@ -1,8 +1,11 @@
+import re
+
 import pandas as pd
 from flask import Flask, abort, jsonify, render_template, request
 
 import analysis
 import config
+from recommenders import hybrid
 from recommenders import item_based as recommender
 from recommenders import user_based as user_recommender
 from recommenders.curated import CURATED_USERS
@@ -121,6 +124,53 @@ def api_recommend_user(user_id):
     return jsonify({"recommendations": recs})
 
 
+@app.route("/api/recommend/build", methods=["POST"])
+def api_recommend_build():
+    """V2C: hybrid recommendation from a list of liked movies.
+
+    Body: {movie_ids: int[], alpha?: float in [0,1], n?: int}
+    alpha=0 → pure content (V1 TF-IDF aggregation).
+    alpha=1 → pure collaborative filtering (V2A SVD fold-in).
+    """
+    payload = request.get_json(silent=True) or {}
+    raw_ids = payload.get("movie_ids", [])
+
+    try:
+        alpha = float(payload.get("alpha", 0.5))
+    except (TypeError, ValueError):
+        alpha = 0.5
+    alpha = max(0.0, min(1.0, alpha))
+
+    try:
+        n = max(1, min(int(payload.get("n", 20)), 50))
+    except (TypeError, ValueError):
+        n = 20
+
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return jsonify({
+            "error": "movie_ids must be a non-empty list",
+            "recommendations": [],
+        }), 400
+    try:
+        movie_ids = [int(x) for x in raw_ids]
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "movie_ids must contain integers",
+            "recommendations": [],
+        }), 400
+
+    try:
+        result = hybrid.recommend(movie_ids, n=n, alpha=alpha)
+    except ValueError as exc:
+        return jsonify({
+            "error": "no hybrid input",
+            "hint": str(exc),
+            "recommendations": [],
+        }), 422
+
+    return jsonify(result)
+
+
 @app.route("/api/predict_rating/<int:user_id>/<int:movie_id>")
 def api_predict_rating(user_id, movie_id):
     rating = user_recommender.predict_rating(user_id, movie_id)
@@ -158,7 +208,13 @@ def api_movies():
         mask = df["genres_list"].apply(lambda lst: genre in lst)
         df = df[mask]
     if q:
-        df = df[df["title"].str.contains(q, case=False, na=False)]
+        # Forgiving title match: normalize query the same way as title_norm
+        # (strip non-alphanumerics + lowercase) so "ironman" finds "Iron Man",
+        # "lordoftherings" finds "The Lord of the Rings", etc. Empty after
+        # normalization (e.g. q="!!!") falls through and returns everything.
+        norm_q = re.sub(r"[^a-z0-9]", "", q.lower())
+        if norm_q:
+            df = df[df["title_norm"].str.contains(norm_q, case=False, na=False, regex=False)]
 
     if sort == "popular":
         df = df.sort_values("weighted_score", ascending=False, na_position="last")

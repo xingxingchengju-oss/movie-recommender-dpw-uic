@@ -41,4 +41,12 @@
       {# Curated rows injected here by user_profile.js once /api/users resolves. #}
     </ul>
   </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Your favorites</div>
+    <a href="{{ url_for('page_recommender') }}#tab=from-favorites" class="favorites-link" id="favorites-link">
+      <span class="favorites-icon" aria-hidden="true">♥</span>
+      <span class="favorites-label" id="favorites-count-text">No favorites yet</span>
+    </a>
+  </div>
 </nav>

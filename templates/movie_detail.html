@@ -62,6 +62,14 @@
           </div>
         </div>
 
+        <div class="fav-action" data-movie-id="{{ movie.id }}" data-movie-title="{{ movie.title }}">
+          <button type="button" id="fav-btn" class="fav-btn">
+            <span class="fav-btn-icon" aria-hidden="true">♡</span>
+            <span class="fav-btn-label">Save to favorites</span>
+          </button>
+          <p id="fav-hint" class="fav-hint" hidden></p>
+        </div>
+
         <div class="detail-overview-section">
           <span class="stat-label" style="display:block;margin-bottom:10px">Overview</span>
           <p class="detail-overview">{{ movie.overview if movie.overview else "No overview available." }}</p>
@@ -94,6 +102,7 @@
     lucide.createIcons();
   </script>
   <script src="{{ url_for('static', filename='user_profile.js') }}"></script>
+  <script src="{{ url_for('static', filename='favorites.js') }}"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

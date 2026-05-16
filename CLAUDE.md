@@ -48,6 +48,56 @@ SVD via `scipy.sparse.linalg.svds`, k=50, with **user-mean centering** before fa
 - Precision@10 = 0.0983 (averaged over 287 users with ≥5 liked test ratings)
 - Random baseline P@10 ≈ 0.003 — SVD is ~30× better than random.
 
+## V2B3: SVD fold-in (kept as the CF leg of V2C hybrid)
+Fold-in projects a sparse synthetic rating vector into the SVD basis learned at startup. For training factors `R_centered ≈ U Σ Vt` and a synthetic centered vector `r_centered` (5.0 minus training-set global mean μ, only on selected movies):
+
+```
+u_new  = r_centered @ V / σ_safe         # project (σ_safe = max(σ, 1e-6))
+scores = (u_new * σ) @ Vt + μ            # reconstruct
+```
+
+The σ in the projection and the σ in the reconstruction cancel mathematically (`r @ V Vt + μ` is equivalent), but we keep the two-step form because (a) it documents the algorithm step-by-step for the defense, and (b) the σ_safe floor guards against numerical noise from any tiny singular values.
+
+**Baseline choice.** The synthetic user can't center against its own all-5.0 inputs (that collapses `r_centered` to zero). We use the training-set global mean (μ ≈ 3.57) — standard fold-in practice.
+
+**State added at build time:** `Vt` (k×n_movies f32 ≈ 400 KB), `σ` (k float32 vector), `global_mean`.
+
+**Public function:** `recommenders.user_based.fold_in_scores(liked_ids)` returns the raw (n_movies,) score vector plus used/ignored id lists. Used both by `recommend_from_synthetic_user` (internal) and by `recommenders.hybrid` (V2C).
+
+## V2C: Favorites + Hybrid recommender
+The original Build Your Own's temporary-input UX was replaced with **persistent favorites**:
+
+- **Save button** on every Movie Detail page writes to `localStorage["reelvana_favorites"]` as `[{id, title}, ...]`.
+- **Sidebar "Your favorites"** shows live count badge across all pages (`static/favorites.js`).
+- **Recommend → From Favorites tab** has three states:
+  - Curated profile active → "Switch to Guest" CTA (favorites are Guest-only by product design — avoids concept clash with curated profiles' 50+ MovieLens ratings).
+  - Guest + 0 favorites → "Save a film on a detail page" empty state.
+  - Guest + favorites → chips + **α slider** + Find button.
+
+**Hybrid algorithm** (`recommenders/hybrid.py`): for liked ids `L`, computes two parallel catalog-wide score vectors and linearly blends:
+
+```
+content[m] = Σ_{l ∈ L} V1_cosine_sim(l, m)   # then min-max normalized to [0,1]
+cf[m]      = SVD fold-in scores for L         # then min-max normalized to [0,1]
+final[m]   = (1 - α) · content[m] + α · cf[m]
+```
+
+- α = 0 → pure content (V1 TF-IDF aggregation, covers 16,556 English films)
+- α = 1 → pure CF (V2A SVD fold-in, covers 1,956 films)
+- Anywhere in between blends both signals over the **union ≈ 16,800 films** = **~74% of the catalog**, vs fold-in alone at 8.6%.
+
+A movie missing from one engine contributes 0 there (not -∞) so it still ranks if the other side scores it highly. Liked films are masked out before top-N.
+
+**Why-this explanations.** Each returned recommendation includes `{source_id, source_title, sim}` — the liked film with highest V1 cosine similarity to that recommendation. Content-based attribution is more intuitive for end users than CF latent distance, even when the score blend leaned CF.
+
+**API:** `POST /api/recommend/build` body `{movie_ids: int[], alpha?: float ∈ [0,1], n?: int}` returns `{recommendations, used_ids, ignored_ids, explanations}` (plus a friendly `hint` when the slider position kills all candidates).
+
+**Known limitations** (for the defense):
+- Favorites are local-storage-only — no cross-device sync.
+- Hybrid uses simple min-max normalization rather than RRF or z-score; stable on small data, but α's meaning may drift slightly across queries.
+- Why-this uses V1 cosine even for CF-heavy blends — UX choice, not bug.
+- Favorites are Guest-only by design (curated profiles already have implicit "favorites" via their 50+ MovieLens ratings).
+
 ## Rules
 - All code/comments in English
 - Don't modify files in `data/`
