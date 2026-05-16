@@ -239,6 +239,15 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
   box-shadow: 0 0 6px var(--accent-glow);
 }
 
+.profile-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
+  width: 18px;
+  text-align: center;
+  filter: saturate(0.9);
+}
+
 .profile-meta {
   display: flex;
   flex-direction: column;
@@ -1774,6 +1783,46 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
   list-style: none;
 }
 
+.rec-samples {
+  margin: 0 0 28px 0;
+  max-width: 640px;
+}
+
+.rec-samples-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.rec-samples-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rec-sample-chip {
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out-expo),
+              border-color var(--duration-fast) var(--ease-out-expo),
+              color var(--duration-fast) var(--ease-out-expo);
+}
+
+.rec-sample-chip:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .rec-selected {
   margin: 16px 0 28px 0;
 }
@@ -2185,10 +2234,25 @@ button { cursor: pointer; border: none; background: none; font: inherit; color: 
 }
 
 .fav-slider-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 8px;
   font-size: 0.82rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.fav-slider-hint {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.fav-slider-alpha {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 /* Submit button */

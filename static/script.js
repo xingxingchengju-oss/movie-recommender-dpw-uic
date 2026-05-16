@@ -413,6 +413,7 @@ function renderMovieCard(m, indexOffset, explanation) {
   const suggestionsBox = document.getElementById("rec-suggestions");
   const selectedBox = document.getElementById("rec-selected");
   const resultsGrid = document.getElementById("rec-results");
+  const samplesRow = document.getElementById("rec-samples");
   if (!searchInput || !suggestionsBox || !resultsGrid) return;
 
   const MIN_CHARS = 2;
@@ -468,6 +469,7 @@ function renderMovieCard(m, indexOffset, explanation) {
 
   function selectMovie(id, title) {
     closeSuggestions();
+    if (samplesRow) samplesRow.hidden = true;
     searchInput.value = title;
     selectedBox.innerHTML = `
       <div class="rec-selected-card">
@@ -509,6 +511,14 @@ function renderMovieCard(m, indexOffset, explanation) {
     if (!row) return;
     selectMovie(row.dataset.id, row.dataset.title);
   });
+
+  if (samplesRow) {
+    samplesRow.addEventListener("click", (e) => {
+      const chip = e.target.closest(".rec-sample-chip");
+      if (!chip) return;
+      selectMovie(chip.dataset.id, chip.dataset.title);
+    });
+  }
 
   document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
@@ -827,7 +837,9 @@ function renderMovieCard(m, indexOffset, explanation) {
           hide();
           return;
         }
-        valueEl.textContent = Number(data.predicted_rating).toFixed(1);
+        // SVD predicts on the MovieLens 0.5–5.0 scale; rescale to /10 so the
+        // user can read it side-by-side with the community vote_average column.
+        valueEl.textContent = (Number(data.predicted_rating) * 2).toFixed(1);
         wrap.hidden = false;
       })
       .catch((err) => {
@@ -911,6 +923,7 @@ function renderMovieCard(m, indexOffset, explanation) {
   const chipsBox = document.getElementById("fav-chips");
   const alphaInput = document.getElementById("fav-alpha");
   const alphaReadout = document.getElementById("fav-alpha-readout");
+  const alphaHint = document.getElementById("fav-slider-hint");
   const submitBtn = document.getElementById("fav-submit");
   const noteEl = document.getElementById("fav-note");
   const resultsGrid = document.getElementById("fav-results");
@@ -986,9 +999,20 @@ function renderMovieCard(m, indexOffset, explanation) {
     if (currentSig() !== lastFetchedSig) submit();
   }
 
+  // Map α ∈ [0,1] to a one-line plain-English description. The readout still
+  // shows the raw number for the technical reader; this hint translates it.
+  function describeAlpha(a) {
+    if (a <= 0.05) return "Pure content: films similar to what you saved";
+    if (a < 0.4) return "Content-leaning: mostly similarity to your saves";
+    if (a <= 0.6) return "Balanced mix: similarity + crowd taste";
+    if (a < 0.95) return "Crowd-leaning: mostly what similar viewers liked";
+    return "Pure collaborative: what users like you also liked";
+  }
+
   function updateAlphaReadout() {
     const a = Number(alphaInput.value) / 100;
     alphaReadout.textContent = a.toFixed(2);
+    if (alphaHint) alphaHint.textContent = describeAlpha(a);
   }
 
   function submit() {

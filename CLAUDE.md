@@ -22,7 +22,7 @@ Python 3.9+ · Flask · HTML/CSS/JS · pandas · scikit-learn · Plotly.js
 - `scripts/` — one-shot offline tools (curated-user picker, recommender eval)
 
 ## Data
-- `movies_clean.csv` (22,796 rows): use `id`, `title`, `release_year`, `primary_genre`, `genres_parsed`, `overview`, `vote_average`, `keywords_parsed`, `director`
+- `movies_final_clean.csv` (22,720 raw rows → **22,620 served**): use `id`, `title`, `release_year`, `primary_genre`, `genres_parsed`, `overview`, `vote_average`, `keywords_parsed`, `director`. The 100-row gap is the runtime sanity filter in `data_loader.py` dropping CSV column-shift corruption (7 NaN id/title + 8 out-of-range vote_average + 8 out-of-range release_year + 85 rows whose title is `�`-garbled or pure numerics).
 - `ratings_clean.csv` (40,008 rows): `userId`, `movieId`, `rating`
 - `budget=NaN` / `revenue=NaN` mean undisclosed — exclude from financial calcs
 
@@ -30,7 +30,7 @@ Python 3.9+ · Flask · HTML/CSS/JS · pandas · scikit-learn · Plotly.js
 TF-IDF on `overview + genres_parsed + keywords_parsed`, cosine similarity, return top-N. Compute once at app startup, store in memory. No persistence needed.
 
 ## V2A: User Recommender (SVD collaborative filtering)
-SVD via `scipy.sparse.linalg.svds`, k=50, with **user-mean centering** before factorization. The dense predicted-ratings matrix (671 users × 1956 movies, float32) is built at app startup in `user_recommender.py` and cached in memory; per-request work is a row copy + seen-mask + top-N argpartition. Ratings come from `ratings_clean.csv`; the MovieLens `movieId` is bridged to our TMDB `id` via `data/raw/links.csv` (MovieLens 1 = TMDB 862 = Toy Story — naive matching would be wrong).
+SVD via `scipy.sparse.linalg.svds`, k=50, with **user-mean centering** before factorization. The dense predicted-ratings matrix (671 users × 1956 movies, float32) is built at app startup in `recommenders/user_based.py` and cached in memory; per-request work is a row copy + seen-mask + top-N argpartition. Ratings come from `ratings_clean.csv`; the MovieLens `movieId` is bridged to our TMDB `id` via `data/raw/links.csv` (MovieLens 1 = TMDB 862 = Toy Story — naive matching would be wrong). The predicted rating is stored on the MovieLens 0.5–5.0 scale; the Movie Detail page rescales it to /10 at display time so it sits side-by-side with the TMDB `vote_average`.
 
 **API:** `GET /api/users` lists profiles; `GET /api/recommend/user/<id>?n=20` returns recs in the same shape as V1's `/api/recommend/<movie_id>`.
 
@@ -42,6 +42,8 @@ SVD via `scipy.sparse.linalg.svds`, k=50, with **user-mean centering** before fa
 | 493 | Romance lover      | Romance          | 58      | 79%   |
 | 95  | Horror buff        | Horror           | 114     | 40%   |
 | 525 | Action junkie      | Action           | 60      | 53%   |
+
+**Honest note on the Horror buff (defense-relevant).** User 95 is the highest-share horror rater available in MovieLens-1M's 671 users — every other horror-leaning user sits at ≤28% share. With only 40% of their ratings on horror, SVD's latent factors capture the *other 60%* of their taste too (drama, thrillers, classics), so the recommendation slate mixes horror with broader picks rather than returning pure horror. We deliberately do **not** patch this with a hand-tuned genre boost — that would corrupt the "this is what SVD says" narrative. The honest framing is that V2C's hybrid α slider is the proper user-facing answer: drag toward Content to lean into genre fidelity for the films saved on the favorites list. Pure-SVD recommendations on a 671-user catalog will always drift toward popular cross-genre items; that's a property of CF on small data, not a bug.
 
 **Evaluation** (`scripts/eval_recommender.py`, 80/20 random split, seed=42):
 - RMSE = 0.9552 · MAE = 0.7452 (on 7,796 servable test pairs)

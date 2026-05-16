@@ -57,6 +57,22 @@
     dispatchChange(normalized);
   }
 
+  // Map curated profile's top genre to a single emoji. Keeping the keys aligned
+  // to canonical TMDB genres so the lookup also works if we add new curated
+  // users later. Missing genre falls back to the clapperboard.
+  const GENRE_EMOJI = {
+    "Science Fiction": "🚀",
+    "Comedy": "😂",
+    "Romance": "💕",
+    "Horror": "👻",
+    "Action": "💥",
+    "Adventure": "🗺️",
+    "Animation": "🎨",
+    "Drama": "🎭",
+    "Fantasy": "🧙",
+    "Thriller": "🔪",
+  };
+
   function renderCuratedRows(users) {
     const list = document.getElementById("profile-list");
     if (!list) return;
@@ -64,18 +80,20 @@
     list.querySelectorAll(".profile-row.curated").forEach((el) => el.parentElement.remove());
 
     const html = users
-      .map(
-        (u) => `
+      .map((u) => {
+        const icon = GENRE_EMOJI[u.top_genre] || "🎬";
+        return `
         <li>
           <button type="button" class="profile-row curated" data-profile-id="${u.id}">
             <span class="profile-radio" aria-hidden="true"></span>
+            <span class="profile-icon" aria-hidden="true">${icon}</span>
             <span class="profile-meta">
               <span class="profile-label">${escapeHTML(u.label)}</span>
               <span class="profile-sub">${escapeHTML(u.top_genre)} · ${u.n_ratings} ratings</span>
             </span>
           </button>
-        </li>`
-      )
+        </li>`;
+      })
       .join("");
     list.insertAdjacentHTML("beforeend", html);
   }

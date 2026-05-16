@@ -39,6 +39,17 @@
         <ul id="rec-suggestions" class="rec-suggestions" role="listbox"></ul>
       </div>
 
+      <div id="rec-samples" class="rec-samples">
+        <span class="rec-samples-label">Try one of these</span>
+        <div class="rec-samples-row">
+          <button type="button" class="rec-sample-chip" data-id="27205" data-title="Inception">Inception</button>
+          <button type="button" class="rec-sample-chip" data-id="238" data-title="The Godfather">The Godfather</button>
+          <button type="button" class="rec-sample-chip" data-id="862" data-title="Toy Story">Toy Story</button>
+          <button type="button" class="rec-sample-chip" data-id="680" data-title="Pulp Fiction">Pulp Fiction</button>
+          <button type="button" class="rec-sample-chip" data-id="278" data-title="The Shawshank Redemption">The Shawshank Redemption</button>
+        </div>
+      </div>
+
       <div id="rec-selected" class="rec-selected"></div>
       <div id="rec-results" class="movie-grid"></div>
     </section>
@@ -103,7 +114,10 @@
                    min="0" max="100" step="1" value="50">
             <span class="fav-slider-edge">Collaborative</span>
           </div>
-          <div class="fav-slider-readout">α = <span id="fav-alpha-readout">0.50</span></div>
+          <div class="fav-slider-readout">
+            <span class="fav-slider-hint" id="fav-slider-hint">Balanced mix: similarity + crowd taste</span>
+            <span class="fav-slider-alpha">α = <span id="fav-alpha-readout">0.50</span></span>
+          </div>
         </div>
 
         <button type="button" id="fav-submit" class="fav-submit">Find recommendations</button>

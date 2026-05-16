@@ -1,3 +1,4 @@
+import logging
 import re
 
 import pandas as pd
@@ -241,4 +242,9 @@ def api_movies():
 
 
 if __name__ == "__main__":
+    # Quiet Werkzeug's per-request access log when not actively debugging — the
+    # startup prints above already report load state, and 200 OK spam buries
+    # actual errors during a demo.
+    if not config.DEBUG:
+        logging.getLogger("werkzeug").setLevel(logging.WARNING)
     app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
